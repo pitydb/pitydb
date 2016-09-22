@@ -1,10 +1,6 @@
 package slot
 
-type Root struct {
-	Slot
-	Meta *SlotMeta
-	Val  []Slot
-}
+
 
 func NewRoot(meta *SlotMeta) *Root {
 	return &Root{Meta:meta}

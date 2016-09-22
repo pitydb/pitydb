@@ -28,6 +28,59 @@ type Slot interface {
 	MakeSlot(buf []byte, offset uint32) uint32
 }
 
+//NullSlot Do nothing and it's size is zero
+type NullSlot struct {
+	Slot
+}
+
+//Integer's value is int32
+type Integer struct {
+	Slot
+	Val int32
+}
+
+//Long's value is int64
+type Long struct {
+	Slot
+	Val int64
+}
+
+//Float's value is float32
+type Float struct {
+	Slot
+	Val float32
+}
+
+//Double's value is float64
+type Double struct {
+	Slot
+	Val float64
+}
+
+//Boolean's value is bool
+type Boolean struct {
+	Slot
+	Val bool
+}
+
+//String's value is string
+type String struct {
+	Slot
+	Val string
+}
+
+//Root represent the record root to travel
+type Root struct {
+	Slot
+	Pre    uint32    //the pre root
+	Next   uint32    //the next root
+	PageID uint32    //the page id
+	Key    uint32    //the key used for b+ tree
+	Meta   *SlotMeta //meta data for loop data
+	Val    []Slot    //the data part
+}
+
+//Make a new Slot via the byte value, if nothing found ,return NullSlot
 func MakeSlot(typ byte) Slot {
 	switch typ{
 	case ST_INTEGER:
@@ -44,7 +97,4 @@ func MakeSlot(typ byte) Slot {
 		return NewString("")
 	}
 	return NewNullSlot()
-}
-func Write() {
-
 }

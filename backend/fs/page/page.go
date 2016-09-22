@@ -1,25 +1,13 @@
 package page
 
-import "../row"
+import "github.com/lycying/laladb/backend/fs/tuple"
 
 const DEFAULT_PAGE_SIZE = 1024 * 16
 
-type Page struct {
-	offset   int //64TiB max
-	previous int
-	next     int
-	typ      int
-	rows     []*row.Row
+type DataPage struct {
+	PageID uint32         //4294967295.0*16/1024/1024/1024 ~= 63.99999998509884 TiB
+	Val    []*tuple.Tuple //the tuple data
 }
 
-func NewPage() *Page {
-	return &Page{
-	}
-}
-
-//After this,the buf became a bean
-func (this *Page) ToBean(buf []byte) {
-}
-//After this,the bean became an byte array
-func (this *Page) ToBytes() {
+type IndexPage struct {
 }

@@ -5,33 +5,7 @@ import (
 	"bytes"
 )
 
-type NullSlot struct {
-	Slot
-}
-type Integer struct {
-	Slot
-	Val int32
-}
-type Long struct {
-	Slot
-	Val int64
-}
-type Float struct {
-	Slot
-	Val float32
-}
-type Double struct {
-	Slot
-	Val float64
-}
-type Boolean struct {
-	Slot
-	Val bool
-}
-type String struct {
-	Slot
-	Val string
-}
+
 
 func NewNullSlot() *NullSlot{
 	return &NullSlot{}

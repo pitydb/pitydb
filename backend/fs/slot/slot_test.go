@@ -102,6 +102,7 @@ func TestRoot_MakeSlot_ToBytes(t *testing.T) {
 
 	root := NewRoot(meta)
 	root.MakeSlot(data, 0)
-	assert.Equal(t, root.Val[1].(*Integer).Val, int32(-1024))
-	assert.Equal(t, root.Val[5].(*String).Val, "!@#$%^&*()END")
+	assert.Equal(t, root.Val[1].(*Integer).Val, int32(-1024), "should be eq")
+	assert.Equal(t, root.Val[5].(*String).Val, "!@#$%^&*()END", "should be eq")
+	assert.Equal(t, root.ToBytes(), data, "should be eq")
 }
