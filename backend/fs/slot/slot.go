@@ -2,7 +2,7 @@ package slot
 
 const (
 	ST_ROOT byte = 0x00        //root flag
-	ST_INT byte = 0x01
+	ST_INTEGER byte = 0x01
 	ST_LONG byte = 0x02
 	ST_FLOAT byte = 0x03
 	ST_DOUBLE byte = 0x04
@@ -15,13 +15,36 @@ const (
 	ST_BLOB byte = 0x11        //object that large than 1 page
 )
 
-type SlotType byte
+type SlotMeta struct {
+	MetaType byte
+	Children []*SlotMeta
+}
 
 type Slot interface {
 	//Make the slot type to be bytes
-	ToBeBytes() []byte
+	ToBytes() []byte
 
 	//Read needed bytes from byte array and make itself a Slot object
 	MakeSlot(buf []byte, offset uint32) uint32
 }
 
+func MakeSlot(typ byte) Slot {
+	switch typ{
+	case ST_INTEGER:
+		return NewInteger(0)
+	case ST_LONG:
+		return NewLong(0)
+	case ST_FLOAT:
+		return NewFloat(0)
+	case ST_DOUBLE:
+		return NewDouble(0)
+	case ST_BOOL:
+		return NewBoolean(false)
+	case ST_STRING:
+		return NewString("")
+	}
+	return NewNullSlot()
+}
+func Write() {
+
+}
