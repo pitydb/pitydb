@@ -1,5 +1,7 @@
 package slot
 
+import "github.com/lycying/pitydb/backend/fs"
+
 const (
 	ST_ROOT byte = 0x00        //root flag
 	ST_INTEGER byte = 0x01
@@ -15,17 +17,10 @@ const (
 	ST_BLOB byte = 0x11        //object that large than 1 page
 )
 
-type SlotMeta struct {
-	MetaType byte
-	Children []*SlotMeta
-}
+
 
 type Slot interface {
-	//Make the slot type to be bytes
-	ToBytes() []byte
-
-	//Read needed bytes from byte array and make itself a Slot object
-	MakeSlot(buf []byte, offset uint32) uint32
+	fs.Persistent
 }
 
 //NullSlot Do nothing and it's size is zero
@@ -69,16 +64,6 @@ type String struct {
 	Val string
 }
 
-//Root represent the record root to travel
-type Root struct {
-	Slot
-	Pre    uint32    //the pre root
-	Next   uint32    //the next root
-	PageID uint32    //the page id
-	Key    uint32    //the key used for b+ tree
-	Meta   *SlotMeta //meta data for loop data
-	Val    []Slot    //the data part
-}
 
 //Make a new Slot via the byte value, if nothing found ,return NullSlot
 func MakeSlot(typ byte) Slot {

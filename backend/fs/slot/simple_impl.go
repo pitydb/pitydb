@@ -32,7 +32,7 @@ func (s *NullSlot) ToBytes() []byte {
 	return nil
 }
 
-func (s *NullSlot) MakeSlot(buf []byte, offset uint32) uint32 {
+func (s *NullSlot) Make(buf []byte, offset uint32) uint32 {
 	return 0
 }
 
@@ -46,7 +46,7 @@ func (s *String) ToBytes() []byte {
 
 //read length first , then read the data
 //TODO uinit32 is too big to save , make it smaller
-func (s *String) MakeSlot(buf []byte, offset uint32) uint32 {
+func (s *String) Make(buf []byte, offset uint32) uint32 {
 	size := uint32(binary.BigEndian.Uint32(buf[offset:offset + 4]))
 	arr := buf[offset + 4:offset + 4 + size]
 	s.Val = string(arr)
@@ -59,7 +59,7 @@ func (s *Integer) ToBytes() []byte {
 	return buf.Bytes()
 }
 
-func (s *Integer) MakeSlot(buf []byte, offset uint32) uint32 {
+func (s *Integer) Make(buf []byte, offset uint32) uint32 {
 	byteBuf := bytes.NewBuffer(buf[offset:offset + 4])
 	binary.Read(byteBuf, binary.BigEndian, &s.Val)
 	return 4
@@ -71,7 +71,7 @@ func (s *Long) ToBytes() []byte {
 	return buf.Bytes()
 }
 
-func (s *Long) MakeSlot(buf []byte, offset uint32) uint32 {
+func (s *Long) Make(buf []byte, offset uint32) uint32 {
 	byteBuf := bytes.NewBuffer(buf[offset:offset + 8])
 	binary.Read(byteBuf, binary.BigEndian, &s.Val)
 	return 8
@@ -83,7 +83,7 @@ func (s *Float) ToBytes() []byte {
 	return buf.Bytes()
 }
 
-func (s *Float) MakeSlot(buf []byte, offset uint32) uint32 {
+func (s *Float) Make(buf []byte, offset uint32) uint32 {
 	byteBuf := bytes.NewReader(buf[offset:offset + 4])
 	binary.Read(byteBuf, binary.BigEndian, &s.Val)
 	return 4
@@ -94,7 +94,7 @@ func (s *Double) ToBytes() []byte {
 	return buf.Bytes()
 }
 
-func (s *Double) MakeSlot(buf []byte, offset uint32) uint32 {
+func (s *Double) Make(buf []byte, offset uint32) uint32 {
 	byteBuf := bytes.NewReader(buf[offset:offset + 8])
 	binary.Read(byteBuf, binary.BigEndian, &s.Val)
 	return 8
@@ -107,7 +107,7 @@ func (s *Boolean) ToBytes() []byte {
 	}
 }
 
-func (s *Boolean) MakeSlot(buf []byte, offset uint32) uint32 {
+func (s *Boolean) Make(buf []byte, offset uint32) uint32 {
 	s.Val = buf[offset] == 0x01
 	return 1
 }
