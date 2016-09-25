@@ -5,16 +5,20 @@ import (
 	"bytes"
 )
 
-
-
-func NewNullSlot() *NullSlot{
+func NewNullSlot() *NullSlot {
 	return &NullSlot{}
 }
 func NewInteger(val int32) *Integer {
 	return &Integer{Val:val}
 }
+func NewUnsignedInteger(val uint32) *UnsignedInteger {
+	return &UnsignedInteger{Val:val}
+}
 func NewLong(val int64) *Long {
 	return &Long{Val:val}
+}
+func NewUnsignedLong(val uint64) *UnsignedLong {
+	return &UnsignedLong{Val:val}
 }
 func NewFloat(val float32) *Float {
 	return &Float{Val:val}
@@ -24,6 +28,9 @@ func NewDouble(val float64) *Double {
 }
 func NewBoolean(val bool) *Boolean {
 	return &Boolean{Val:val}
+}
+func NewByte(val byte) *Byte {
+	return &Byte{Val:val}
 }
 func NewString(val string) *String {
 	return &String{Val:val }
@@ -64,6 +71,17 @@ func (s *Integer) Make(buf []byte, offset uint32) uint32 {
 	binary.Read(byteBuf, binary.BigEndian, &s.Val)
 	return 4
 }
+func (s *UnsignedInteger) ToBytes() []byte {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, s.Val)
+	return buf.Bytes()
+}
+
+func (s *UnsignedInteger) Make(buf []byte, offset uint32) uint32 {
+	byteBuf := bytes.NewBuffer(buf[offset:offset + 4])
+	binary.Read(byteBuf, binary.BigEndian, &s.Val)
+	return 4
+}
 
 func (s *Long) ToBytes() []byte {
 	buf := new(bytes.Buffer)
@@ -72,6 +90,17 @@ func (s *Long) ToBytes() []byte {
 }
 
 func (s *Long) Make(buf []byte, offset uint32) uint32 {
+	byteBuf := bytes.NewBuffer(buf[offset:offset + 8])
+	binary.Read(byteBuf, binary.BigEndian, &s.Val)
+	return 8
+}
+func (s *UnsignedLong) ToBytes() []byte {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, s.Val)
+	return buf.Bytes()
+}
+
+func (s *UnsignedLong) Make(buf []byte, offset uint32) uint32 {
 	byteBuf := bytes.NewBuffer(buf[offset:offset + 8])
 	binary.Read(byteBuf, binary.BigEndian, &s.Val)
 	return 8
@@ -109,5 +138,13 @@ func (s *Boolean) ToBytes() []byte {
 
 func (s *Boolean) Make(buf []byte, offset uint32) uint32 {
 	s.Val = buf[offset] == 0x01
+	return 1
+}
+func (s *Byte) ToBytes() []byte {
+	return []byte{s.Val}
+}
+
+func (s *Byte) Make(buf []byte, offset uint32) uint32 {
+	s.Val = buf[offset]
 	return 1
 }

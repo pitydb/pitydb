@@ -26,9 +26,9 @@ func TestRowDef_MakeSlot_ToBytes(t *testing.T) {
 		},
 	}
 
-	root := NewRowDef(meta)
+	root := NewRow(meta)
 	root.Make(data, 0)
-	assert.Equal(t, root.Val[1].(*slot.Integer).Val, int32(-1024), "should be eq")
-	assert.Equal(t, root.Val[5].(*slot.String).Val, "!@#$%^&*()END", "should be eq")
+	assert.Equal(t, root.Data[1].(*slot.Integer).Val, int32(-1024), "should be eq")
+	assert.Equal(t, root.Data[5].(*slot.String).Val, "!@#$%^&*()END", "should be eq")
 	assert.Equal(t, root.ToBytes(), data, "should be eq")
 }
