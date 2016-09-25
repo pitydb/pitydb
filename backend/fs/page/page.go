@@ -5,6 +5,7 @@ import (
 	"github.com/lycying/pitydb/backend/fs"
 	"github.com/lycying/pitydb/backend/fs/slot"
 	"os"
+	"sort"
 )
 
 const DEFAULT_PAGE_SIZE = 1024 * 16
@@ -34,17 +35,17 @@ type PageTailDef struct {
 
 type Page struct {
 	fs.Persistent
-	Header      *PageHeaderDef
+	Header     *PageHeaderDef
 
-	ItemSize    *slot.UnsignedInteger
-	Pre         *Page
-	Next        *Page
-	Parent      *Page
+	ItemSize   *slot.UnsignedInteger
+	Pre        *Page
+	Next       *Page
+	Parent     *Page
 
-	Root        *PageTree
-	CurrentSize uint32 //finger if the size is larger than 16kb
+	Root       *PageTree
+	ByteLength uint32 //finger if the size is larger than 16kb
 
-	Context     PageContext
+	Context    PageContext
 }
 
 type IndexPageItem struct {
@@ -103,7 +104,7 @@ func (r *DataPage) ToBytes() []byte {
 func (r *Page) Make(buf []byte, offset uint32) uint32 {
 	idx := uint32(0)
 	idx += r.Header.Make(buf, idx + offset)
-	r.CurrentSize = idx
+	r.ByteLength = idx
 	switch r.Header.Type.Val {
 	case TYPE_INDEX_PAGE:
 		r.Context = &IndexPage{}
@@ -142,9 +143,7 @@ func (p *Page) ReadPre() *Page {
 func (p *Page) ReadNext() *Page {
 	return p.Pre
 }
-func (d *DataPage) FindRow(key uint32) *row.Row {
-	return nil
-}
+
 func (d *DataPage) Insert(r *row.Row) {
 
 }
@@ -152,36 +151,49 @@ func (p *IndexPage) FindPage(key uint32) *Page {
 	return nil
 }
 
-func (tree *PageTree) FindRow(key uint32) *row.Row {
+func (tree *PageTree) FindRow(key uint32) (*Page, int, bool) {
 	root := tree.Root
 	if root.Header.Level.Val == 0 {
 		return root.Context.(*DataPage).FindRow(key)
 	}
 	return root.FindRowLoop(key)
 }
-func (tree *PageTree) FindDataPage(key uint32) *Page {
-	root := tree.Root
-	return root.FindPageLoop(key)
-}
 
-func (tree *PageTree) InsertOrUpdate(r *row.Row) {
-	key := r.ClusteredKey.Val
-	node := tree.FindDataPage(key)
-	print(node)
-	data := node.Context.(*DataPage)
-	data.Val = append(data.Val, r)
-}
-func (p *Page) FindPageLoop(key uint32) *Page {
-	if p.Header.Type.Val == TYPE_DATA_PAGE {
-		return p
-	}
-	tmp := p.Context.(*IndexPage).FindPage(key)
-	return tmp
-}
-func (p *Page) FindRowLoop(key uint32) *row.Row {
+func (p *Page) FindRowLoop(key uint32) (*Page, int, bool) {
 	if p.Header.Type.Val == TYPE_DATA_PAGE {
 		return p.Context.(*DataPage).FindRow(key)
 	}
 	tmp := p.Context.(*IndexPage).FindPage(key)
 	return tmp.FindRowLoop(key)
+}
+func (d *DataPage) FindRow(key uint32) (*Page, int, bool) {
+	i := sort.Search(int(d.Holder.ItemSize.Val), func(i int) bool {
+		return int(key) <= int(d.Val[i].ClusteredKey.Val)
+	})
+	println(key, i)
+	if i > 0 && d.Val[i - 1].ClusteredKey.Val >= key {
+		return d.Holder, i - 1, true
+	}
+	return d.Holder, i, false
+}
+func (tree *PageTree) InsertOrUpdate(r *row.Row) {
+	key := r.ClusteredKey.Val
+
+	node, idx, find := tree.FindRow(key)
+
+	data := node.Context.(*DataPage)
+	data.Holder = node
+	node.ItemSize.Val++
+	println("idx", idx, "len", len(data.Val), "now", r.ClusteredKey.Val, "find", find)
+
+	if find {
+		data.Val[idx] = r
+	}else {
+		if idx + 1 > int(data.Holder.ItemSize.Val) {
+			data.Val = append(data.Val, r)
+		}else {
+			data.Val = append(append(data.Val[:idx], r), data.Val[idx:]...)
+		}
+	}
+
 }

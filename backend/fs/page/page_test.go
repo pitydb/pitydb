@@ -5,7 +5,6 @@ import (
 	"github.com/lycying/pitydb/backend/fs/slot"
 	"github.com/lycying/pitydb/backend/fs/row"
 	"os"
-	"fmt"
 )
 
 func TestNewPage(t *testing.T) {
@@ -23,16 +22,6 @@ func TestNewPage(t *testing.T) {
 	link, _ := os.OpenFile("/tmp/b", os.O_RDWR, 0666)
 	tree := NewPageTree(meta, link)
 
-	r := row.NewRow(meta)
-	r.Fill(
-		slot.NewString("skflksfsfdsjflsjfslfj"),
-		slot.NewInteger(int32(100)),
-		slot.NewString("内地"),
-		slot.NewDouble(float64(0.234242423423)),
-		slot.NewBoolean(true),
-		slot.NewString("卡卡老师封疆大吏舒服的沙发"),
-	)
-	r.ClusteredKey = slot.NewUnsignedInteger(uint32(1))
 	tree.Root = &Page{
 		Header:&PageHeaderDef{
 			PageID:slot.NewUnsignedInteger(0),
@@ -43,9 +32,56 @@ func TestNewPage(t *testing.T) {
 			Checksum:slot.NewUnsignedInteger(0),
 			LastModify:slot.NewUnsignedLong(0),
 		},
+		ItemSize:slot.NewUnsignedInteger(0),
 	}
 	tree.Root.Context = &DataPage{
+		Holder:tree.Root,
+
 	}
-	tree.InsertOrUpdate(r)
-	fmt.Println("%x",tree.Root.ToBytes())
+
+	for i := 1; i < 3; i++ {
+		r := row.NewRow(meta)
+		r.Fill(
+			slot.NewString("skflksfsfdsjflsjfslfj"),
+			slot.NewInteger(int32(100)),
+			slot.NewString("内地"),
+			slot.NewDouble(float64(0.234242423423)),
+			slot.NewBoolean(true),
+			slot.NewString("卡卡老师封疆大吏舒服的沙发"),
+		)
+		r.ClusteredKey = slot.NewUnsignedInteger(uint32(i * 2))
+
+		tree.InsertOrUpdate(r)
+	}
+	for i := 1; i < 3; i++ {
+		r := row.NewRow(meta)
+		r.Fill(
+			slot.NewString("skflksfsfdsjflsjfslfj"),
+			slot.NewInteger(int32(100)),
+			slot.NewString("内地"),
+			slot.NewDouble(float64(0.234242423423)),
+			slot.NewBoolean(true),
+			slot.NewString("卡卡老师封疆大吏舒服的沙发"),
+		)
+		r.ClusteredKey = slot.NewUnsignedInteger(uint32(i * 2))
+
+		tree.InsertOrUpdate(r)
+	}
+	for i := 1; i < 1; i++ {
+		r := row.NewRow(meta)
+		r.Fill(
+			slot.NewString("skflksfsfdsjflsjfslfj"),
+			slot.NewInteger(int32(100)),
+			slot.NewString("内地"),
+			slot.NewDouble(float64(0.234242423423)),
+			slot.NewBoolean(true),
+			slot.NewString("卡卡老师封疆大吏舒服的沙发"),
+		)
+		r.ClusteredKey = slot.NewUnsignedInteger(uint32(i * 2 + 1))
+
+		tree.InsertOrUpdate(r)
+	}
+	for _, r := range tree.Root.Context.(*DataPage).Val {
+		print(r.ClusteredKey.Val," ")
+	}
 }
