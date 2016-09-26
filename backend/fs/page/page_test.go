@@ -39,7 +39,7 @@ func TestNewPage(t *testing.T) {
 
 	}
 
-	for i := 1; i < 3; i++ {
+	for i := 1; i < 20; i++ {
 		r := row.NewRow(meta)
 		r.Fill(
 			slot.NewString("skflksfsfdsjflsjfslfj"),
@@ -53,7 +53,7 @@ func TestNewPage(t *testing.T) {
 
 		tree.InsertOrUpdate(r)
 	}
-	for i := 1; i < 3; i++ {
+	for i := 1; i <= 20; i++ {
 		r := row.NewRow(meta)
 		r.Fill(
 			slot.NewString("skflksfsfdsjflsjfslfj"),
@@ -67,7 +67,7 @@ func TestNewPage(t *testing.T) {
 
 		tree.InsertOrUpdate(r)
 	}
-	for i := 1; i < 1; i++ {
+	for i := 20; i > 0; i-- {
 		r := row.NewRow(meta)
 		r.Fill(
 			slot.NewString("skflksfsfdsjflsjfslfj"),
@@ -81,7 +81,5 @@ func TestNewPage(t *testing.T) {
 
 		tree.InsertOrUpdate(r)
 	}
-	for _, r := range tree.Root.Context.(*DataPage).Val {
-		print(r.ClusteredKey.Val," ")
-	}
+
 }

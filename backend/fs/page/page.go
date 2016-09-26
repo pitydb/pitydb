@@ -167,12 +167,26 @@ func (p *Page) FindRowLoop(key uint32) (*Page, int, bool) {
 	return tmp.FindRowLoop(key)
 }
 func (d *DataPage) FindRow(key uint32) (*Page, int, bool) {
-	i := sort.Search(int(d.Holder.ItemSize.Val), func(i int) bool {
+	val_len := int(d.Holder.ItemSize.Val)
+
+	i := sort.Search(val_len, func(i int) bool {
 		return int(key) <= int(d.Val[i].ClusteredKey.Val)
 	})
-	println(key, i)
-	if i > 0 && d.Val[i - 1].ClusteredKey.Val >= key {
-		return d.Holder, i - 1, true
+	println("val_len=", val_len, "idx=", i, "key=", key)
+
+	//the rows is empty
+	if i == 0 && val_len == 0 {
+		return d.Holder, 0, false
+	}
+
+	//should put at the tail of the row array
+	if i >= val_len {
+		return d.Holder, val_len, false
+	}
+
+	ckey := d.Val[i].ClusteredKey.Val
+	if ckey == key {
+		return d.Holder, i, true
 	}
 	return d.Holder, i, false
 }
@@ -183,17 +197,19 @@ func (tree *PageTree) InsertOrUpdate(r *row.Row) {
 
 	data := node.Context.(*DataPage)
 	data.Holder = node
-	node.ItemSize.Val++
-	println("idx", idx, "len", len(data.Val), "now", r.ClusteredKey.Val, "find", find)
 
 	if find {
 		data.Val[idx] = r
 	}else {
-		if idx + 1 > int(data.Holder.ItemSize.Val) {
-			data.Val = append(data.Val, r)
-		}else {
-			data.Val = append(append(data.Val[:idx], r), data.Val[idx:]...)
-		}
+		data.Val = append(data.Val[:idx], append([]*row.Row{r}, data.Val[idx:]...)...)
+		node.ItemSize.Val++
 	}
+	println("result:", find)
+	for _, r := range data.Val {
+		print(r.ClusteredKey.Val, " ")
+	}
+	println("")
+	println("")
 
 }
+
