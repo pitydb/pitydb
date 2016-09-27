@@ -20,7 +20,7 @@ func TestStringSlot_MakeSlot_ToBytes(t *testing.T) {
 	arr := append(space, tmp...)
 	v.Make(arr, uint32(11))
 
-	assert.Equal(t, v.Val, b2, "they should be equals")
+	assert.Equal(t, v.Value, b2, "they should be equals")
 	assert.Equal(t, v.ToBytes(), append(b1, size...), "they should be equals")
 }
 
@@ -34,7 +34,7 @@ func TestIntSlot_MakeSlot_ToBytes(t *testing.T) {
 
 	v.Make(append(space, buf.Bytes()...), 1001)
 
-	assert.Equal(t, v.Val, value, "they should be equals")
+	assert.Equal(t, v.Value, value, "they should be equals")
 	assert.Equal(t, v.ToBytes(), buf.Bytes(), "they should be equals")
 
 }
@@ -48,7 +48,7 @@ func TestLongSlot_MakeSlot_ToBytes(t *testing.T) {
 
 	v.Make(append(space, buf.Bytes()...), 1234)
 
-	assert.Equal(t, v.Val, value, "they should be equals")
+	assert.Equal(t, v.Value, value, "they should be equals")
 	assert.Equal(t, v.ToBytes(), buf.Bytes(), "they should be equals")
 
 }
@@ -63,7 +63,7 @@ func TestFloatSlot_MakeSlot_ToBytes(t *testing.T) {
 
 	v.Make(append(space, buf.Bytes()...), 4321)
 
-	assert.Equal(t, v.Val, value, "they should be equals", v)
+	assert.Equal(t, v.Value, value, "they should be equals", v)
 	assert.Equal(t, v.ToBytes(), buf.Bytes(), "they should be equals")
 
 }
@@ -75,7 +75,7 @@ func TestBooleanSlot_MakeSlot_ToBytes(t *testing.T) {
 
 	v.Make(append(space, 0x01), 4321)
 
-	assert.Equal(t, v.Val, value, "they should be equals", v)
+	assert.Equal(t, v.Value, value, "they should be equals", v)
 	assert.Equal(t, v.ToBytes(), []byte{0x01}, "they should be equals")
 
 }

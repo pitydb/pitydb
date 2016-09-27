@@ -15,7 +15,7 @@ const (
 	TYPE_DATA_PAGE
 )
 
-type PageContext interface {
+type PageContent interface {
 	fs.Persistent
 }
 
@@ -45,7 +45,7 @@ type Page struct {
 	Root       *PageTree
 	ByteLength uint32 //finger if the size is larger than 16kb
 
-	Context    PageContext
+	Data       PageContent
 }
 
 type IndexPageItem struct {
@@ -54,17 +54,17 @@ type IndexPageItem struct {
 }
 
 type IndexPage struct {
-	PageContext
-	Holder *Page
+	PageContent
+	Holder  *Page
 
-	Data   []*IndexPageItem
+	Content []*IndexPageItem
 }
 
 type DataPage struct {
-	PageContext
-	Holder *Page
+	PageContent
+	Holder  *Page
 
-	Val    []*row.Row //the tuple data
+	Content []*row.Row //the tuple data
 }
 
 type PageTree struct {
@@ -81,12 +81,12 @@ func NewPageTree(meta *row.RowMeta, link *os.File) *PageTree {
 }
 func (r *Page) ToBytes() []byte {
 	ret := r.Header.ToBytes()
-	ret = append(ret, r.Context.ToBytes()...)
+	ret = append(ret, r.Data.ToBytes()...)
 	return ret
 }
 func (r *DataPage) Make(buf []byte, offset uint32) uint32 {
 	idx := uint32(0)
-	for _, v := range r.Val {
+	for _, v := range r.Content {
 		idx += v.Make(buf, idx + offset)
 	}
 	return idx
@@ -95,7 +95,7 @@ func (r *DataPage) Make(buf []byte, offset uint32) uint32 {
 func (r *DataPage) ToBytes() []byte {
 	ret := make([]byte, 0)
 	for _, v := range
-	r.Val {
+	r.Content {
 		ret = append(ret, v.ToBytes()...)
 	}
 	return ret
@@ -105,11 +105,11 @@ func (r *Page) Make(buf []byte, offset uint32) uint32 {
 	idx := uint32(0)
 	idx += r.Header.Make(buf, idx + offset)
 	r.ByteLength = idx
-	switch r.Header.Type.Val {
+	switch r.Header.Type.Value {
 	case TYPE_INDEX_PAGE:
-		r.Context = &IndexPage{}
+		r.Data = &IndexPage{}
 	case TYPE_DATA_PAGE:
-		r.Context = &DataPage{}
+		r.Data = &DataPage{}
 	}
 	return idx
 }
@@ -153,27 +153,25 @@ func (p *IndexPage) FindPage(key uint32) *Page {
 
 func (tree *PageTree) FindRow(key uint32) (*Page, int, bool) {
 	root := tree.Root
-	if root.Header.Level.Val == 0 {
-		return root.Context.(*DataPage).FindRow(key)
+	if root.Header.Level.Value == 0 {
+		return root.Data.(*DataPage).FindRow(key)
 	}
 	return root.FindRowLoop(key)
 }
 
 func (p *Page) FindRowLoop(key uint32) (*Page, int, bool) {
-	if p.Header.Type.Val == TYPE_DATA_PAGE {
-		return p.Context.(*DataPage).FindRow(key)
+	if p.Header.Type.Value == TYPE_DATA_PAGE {
+		return p.Data.(*DataPage).FindRow(key)
 	}
-	tmp := p.Context.(*IndexPage).FindPage(key)
+	tmp := p.Data.(*IndexPage).FindPage(key)
 	return tmp.FindRowLoop(key)
 }
 func (d *DataPage) FindRow(key uint32) (*Page, int, bool) {
-	val_len := int(d.Holder.ItemSize.Val)
+	val_len := int(d.Holder.ItemSize.Value)
 
 	i := sort.Search(val_len, func(i int) bool {
-		return int(key) <= int(d.Val[i].ClusteredKey.Val)
+		return int(key) <= int(d.Content[i].ClusteredKey.Value)
 	})
-	println("val_len=", val_len, "idx=", i, "key=", key)
-
 	//the rows is empty
 	if i == 0 && val_len == 0 {
 		return d.Holder, 0, false
@@ -184,32 +182,35 @@ func (d *DataPage) FindRow(key uint32) (*Page, int, bool) {
 		return d.Holder, val_len, false
 	}
 
-	ckey := d.Val[i].ClusteredKey.Val
+	ckey := d.Content[i].ClusteredKey.Value
 	if ckey == key {
 		return d.Holder, i, true
 	}
 	return d.Holder, i, false
 }
+
+func (tree *PageTree) Delete(key uint32) bool {
+	node, idx, find := tree.FindRow(key)
+	data := node.Data.(*DataPage)
+	if find {
+		data.Content = append(data.Content[:idx], data.Content[idx + 1:]...)
+		node.ItemSize.Value--
+	}
+	return false
+}
 func (tree *PageTree) InsertOrUpdate(r *row.Row) {
-	key := r.ClusteredKey.Val
+	key := r.ClusteredKey.Value
 
 	node, idx, find := tree.FindRow(key)
 
-	data := node.Context.(*DataPage)
+	data := node.Data.(*DataPage)
 	data.Holder = node
 
 	if find {
-		data.Val[idx] = r
+		data.Content[idx] = r
 	}else {
-		data.Val = append(data.Val[:idx], append([]*row.Row{r}, data.Val[idx:]...)...)
-		node.ItemSize.Val++
+		data.Content = append(data.Content[:idx], append([]*row.Row{r}, data.Content[idx:]...)...)
+		node.ItemSize.Value++
 	}
-	println("result:", find)
-	for _, r := range data.Val {
-		print(r.ClusteredKey.Val, " ")
-	}
-	println("")
-	println("")
-
 }
 

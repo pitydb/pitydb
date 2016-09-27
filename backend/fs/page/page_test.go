@@ -5,8 +5,16 @@ import (
 	"github.com/lycying/pitydb/backend/fs/slot"
 	"github.com/lycying/pitydb/backend/fs/row"
 	"os"
+	"github.com/stretchr/testify/assert"
 )
 
+func getClusterKeyArrayFromRows(page *Page) []uint32 {
+	debugarr := []uint32{}
+	for _, rowinfo := range page.Data.(*DataPage).Content {
+		debugarr = append(debugarr, rowinfo.ClusteredKey.Value)
+	}
+	return debugarr
+}
 func TestNewPage(t *testing.T) {
 	meta := &row.RowMeta{
 		Type:slot.ST_ROOT,
@@ -34,12 +42,12 @@ func TestNewPage(t *testing.T) {
 		},
 		ItemSize:slot.NewUnsignedInteger(0),
 	}
-	tree.Root.Context = &DataPage{
+	tree.Root.Data = &DataPage{
 		Holder:tree.Root,
 
 	}
 
-	for i := 1; i < 20; i++ {
+	for i := 1; i <= 2; i++ {
 		r := row.NewRow(meta)
 		r.Fill(
 			slot.NewString("skflksfsfdsjflsjfslfj"),
@@ -53,7 +61,8 @@ func TestNewPage(t *testing.T) {
 
 		tree.InsertOrUpdate(r)
 	}
-	for i := 1; i <= 20; i++ {
+	assert.Equal(t, getClusterKeyArrayFromRows(tree.Root), []uint32{uint32(2), uint32(4)})
+	for i := 1; i <= 2; i++ {
 		r := row.NewRow(meta)
 		r.Fill(
 			slot.NewString("skflksfsfdsjflsjfslfj"),
@@ -67,7 +76,9 @@ func TestNewPage(t *testing.T) {
 
 		tree.InsertOrUpdate(r)
 	}
-	for i := 20; i > 0; i-- {
+
+	assert.Equal(t, getClusterKeyArrayFromRows(tree.Root), []uint32{uint32(2), uint32(4)})
+	for i := 4; i > 0; i-- {
 		r := row.NewRow(meta)
 		r.Fill(
 			slot.NewString("skflksfsfdsjflsjfslfj"),
@@ -81,5 +92,12 @@ func TestNewPage(t *testing.T) {
 
 		tree.InsertOrUpdate(r)
 	}
+	assert.Equal(t, getClusterKeyArrayFromRows(tree.Root), []uint32{uint32(2), uint32(3), uint32(4), uint32(5), uint32(7), uint32(9)})
+	tree.Delete(uint32(1))
+	assert.Equal(t, getClusterKeyArrayFromRows(tree.Root), []uint32{uint32(2), uint32(3), uint32(4), uint32(5), uint32(7), uint32(9)})
+	tree.Delete(uint32(2))
+	assert.Equal(t, getClusterKeyArrayFromRows(tree.Root), []uint32{uint32(3), uint32(4), uint32(5), uint32(7), uint32(9)})
+	tree.Delete(uint32(5))
+	assert.Equal(t, getClusterKeyArrayFromRows(tree.Root), []uint32{uint32(3), uint32(4), uint32(7), uint32(9)})
 
 }

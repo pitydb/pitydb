@@ -32,52 +32,52 @@ type NullSlot struct {
 //Integer's value is int32
 type Integer struct {
 	Slot
-	Val int32
+	Value int32
 }
 
 //Unsigned Integer's value is int32
 type UnsignedInteger struct {
 	Slot
-	Val uint32
+	Value uint32
 }
 
 //Long's value is int64
 type Long struct {
 	Slot
-	Val int64
+	Value int64
 }
 //Long's value is int64
 type UnsignedLong struct {
 	Slot
-	Val uint64
+	Value uint64
 }
 //Float's value is float32
 type Float struct {
 	Slot
-	Val float32
+	Value float32
 }
 
 //Double's value is float64
 type Double struct {
 	Slot
-	Val float64
+	Value float64
 }
 
 //Boolean's value is bool
 type Boolean struct {
 	Slot
-	Val bool
+	Value bool
 }
 
 //String's value is string
 type String struct {
 	Slot
-	Val string
+	Value string
 }
 
 type Byte struct {
 	Slot
-	Val byte
+	Value byte
 }
 
 //Make a new Slot via the byte value, if nothing found ,return NullSlot
