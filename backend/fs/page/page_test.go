@@ -100,4 +100,7 @@ func TestNewPage(t *testing.T) {
 	tree.Delete(uint32(5))
 	assert.Equal(t, getClusterKeyArrayFromRows(tree.Root), []uint32{uint32(3), uint32(4), uint32(7), uint32(9)})
 
+	str := "123走你"
+	print(len(str))
+
 }

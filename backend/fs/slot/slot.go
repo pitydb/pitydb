@@ -22,6 +22,7 @@ const (
 
 type Slot interface {
 	fs.Persistent
+	Len() uint32
 }
 
 //NullSlot Do nothing and it's size is zero

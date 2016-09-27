@@ -144,19 +144,8 @@ func (p *Page) ReadNext() *Page {
 	return p.Pre
 }
 
-func (d *DataPage) Insert(r *row.Row) {
-
-}
 func (p *IndexPage) FindPage(key uint32) *Page {
 	return nil
-}
-
-func (tree *PageTree) FindRow(key uint32) (*Page, int, bool) {
-	root := tree.Root
-	if root.Header.Level.Value == 0 {
-		return root.Data.(*DataPage).FindRow(key)
-	}
-	return root.FindRowLoop(key)
 }
 
 func (p *Page) FindRowLoop(key uint32) (*Page, int, bool) {
@@ -165,6 +154,48 @@ func (p *Page) FindRowLoop(key uint32) (*Page, int, bool) {
 	}
 	tmp := p.Data.(*IndexPage).FindPage(key)
 	return tmp.FindRowLoop(key)
+}
+
+func (tree *PageTree) NewPage(typ byte, level byte) *Page {
+	p := &Page{
+		Header:&PageHeaderDef{
+			PageID:slot.NewUnsignedInteger(1), //TODO next id
+			Type:slot.NewByte(typ),
+			Level:slot.NewByte(level),
+			Pre:slot.NewUnsignedInteger(0),
+			Next:slot.NewUnsignedInteger(0),
+			Checksum:slot.NewUnsignedInteger(0),
+			LastModify:slot.NewUnsignedLong(0),
+		},
+		Root:tree,
+		ByteLength:slot.NewUnsignedInteger(0),
+		ItemSize:slot.NewUnsignedInteger(0),
+
+
+	}
+	p.Data = func(typ byte) PageContent {
+		if typ == TYPE_DATA_PAGE {
+			return &DataPage{
+				Holder:p,
+				Content:[]*row.Row{},
+			}
+		}else if typ == TYPE_INDEX_PAGE {
+			return &IndexPage{
+				Holder:p,
+				Content:[]*IndexPageItem{},
+			}
+		}
+		return nil
+	}
+	return p
+}
+
+func (tree *PageTree) FindRow(key uint32) (*Page, int, bool) {
+	root := tree.Root
+	if root.Header.Level.Value == 0 {
+		return root.Data.(*DataPage).FindRow(key)
+	}
+	return root.FindRowLoop(key)
 }
 func (d *DataPage) FindRow(key uint32) (*Page, int, bool) {
 	val_len := int(d.Holder.ItemSize.Value)
@@ -189,15 +220,6 @@ func (d *DataPage) FindRow(key uint32) (*Page, int, bool) {
 	return d.Holder, i, false
 }
 
-func (tree *PageTree) Delete(key uint32) bool {
-	node, idx, find := tree.FindRow(key)
-	data := node.Data.(*DataPage)
-	if find {
-		data.Content = append(data.Content[:idx], data.Content[idx + 1:]...)
-		node.ItemSize.Value--
-	}
-	return false
-}
 func (tree *PageTree) InsertOrUpdate(r *row.Row) {
 	key := r.ClusteredKey.Value
 
@@ -209,8 +231,26 @@ func (tree *PageTree) InsertOrUpdate(r *row.Row) {
 	if find {
 		data.Content[idx] = r
 	}else {
-		data.Content = append(data.Content[:idx], append([]*row.Row{r}, data.Content[idx:]...)...)
-		node.ItemSize.Value++
+		bs := node.ByteLength + r.Len()
+
+		if bs <= DEFAULT_PAGE_SIZE {
+			data.Content = append(data.Content[:idx], append([]*row.Row{r}, data.Content[idx:]...)...)
+			node.ItemSize.Value++
+		}else {
+			//should split here
+			//newNode := tree.NewPage(TYPE_DATA_PAGE, 0)
+		}
+
 	}
 }
 
+func (tree *PageTree) Delete(key uint32) bool {
+	node, idx, find := tree.FindRow(key)
+	data := node.Data.(*DataPage)
+	if find {
+		data.Content = append(data.Content[:idx], data.Content[idx + 1:]...)
+		node.ItemSize.Value--
+		return true
+	}
+	return false
+}

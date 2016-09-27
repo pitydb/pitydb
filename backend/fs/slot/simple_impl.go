@@ -60,17 +60,26 @@ func (s *String) Make(buf []byte, offset uint32) uint32 {
 	return size + 4
 }
 
-func (s *Integer) ToBytes() []byte {
+func (s *String) Len() uint32 {
+	return uint32(len(s.Value) + 4)
+}
+
+func (i *Integer) ToBytes() []byte {
 	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.BigEndian, s.Value)
+	binary.Write(buf, binary.BigEndian, i.Value)
 	return buf.Bytes()
 }
 
-func (s *Integer) Make(buf []byte, offset uint32) uint32 {
+func (i *Integer) Make(buf []byte, offset uint32) uint32 {
 	byteBuf := bytes.NewBuffer(buf[offset:offset + 4])
-	binary.Read(byteBuf, binary.BigEndian, &s.Value)
+	binary.Read(byteBuf, binary.BigEndian, &i.Value)
 	return 4
 }
+
+func (i *Integer) Len() uint32 {
+	return uint32(4)
+}
+
 func (s *UnsignedInteger) ToBytes() []byte {
 	buf := new(bytes.Buffer)
 	binary.Write(buf, binary.BigEndian, s.Value)
@@ -81,6 +90,10 @@ func (s *UnsignedInteger) Make(buf []byte, offset uint32) uint32 {
 	byteBuf := bytes.NewBuffer(buf[offset:offset + 4])
 	binary.Read(byteBuf, binary.BigEndian, &s.Value)
 	return 4
+}
+
+func (s *UnsignedInteger) Len() uint32 {
+	return uint32(4)
 }
 
 func (s *Long) ToBytes() []byte {
@@ -94,6 +107,11 @@ func (s *Long) Make(buf []byte, offset uint32) uint32 {
 	binary.Read(byteBuf, binary.BigEndian, &s.Value)
 	return 8
 }
+
+func (s *Long) Len() uint32 {
+	return uint32(8)
+}
+
 func (s *UnsignedLong) ToBytes() []byte {
 	buf := new(bytes.Buffer)
 	binary.Write(buf, binary.BigEndian, s.Value)
@@ -104,6 +122,10 @@ func (s *UnsignedLong) Make(buf []byte, offset uint32) uint32 {
 	byteBuf := bytes.NewBuffer(buf[offset:offset + 8])
 	binary.Read(byteBuf, binary.BigEndian, &s.Value)
 	return 8
+}
+
+func (s *UnsignedLong) Len() uint32 {
+	return uint32(8)
 }
 
 func (s *Float) ToBytes() []byte {
@@ -117,6 +139,11 @@ func (s *Float) Make(buf []byte, offset uint32) uint32 {
 	binary.Read(byteBuf, binary.BigEndian, &s.Value)
 	return 4
 }
+
+func (s *Float) Len() uint32 {
+	return uint32(4)
+}
+
 func (s *Double) ToBytes() []byte {
 	buf := new(bytes.Buffer)
 	binary.Write(buf, binary.BigEndian, s.Value)
@@ -128,6 +155,11 @@ func (s *Double) Make(buf []byte, offset uint32) uint32 {
 	binary.Read(byteBuf, binary.BigEndian, &s.Value)
 	return 8
 }
+
+func (s *Double) Len() uint32 {
+	return uint32(8)
+}
+
 func (s *Boolean) ToBytes() []byte {
 	if s.Value {
 		return []byte{0x01}
@@ -140,6 +172,11 @@ func (s *Boolean) Make(buf []byte, offset uint32) uint32 {
 	s.Value = buf[offset] == 0x01
 	return 1
 }
+
+func (s *Boolean) Len() uint32 {
+	return uint32(1)
+}
+
 func (s *Byte) ToBytes() []byte {
 	return []byte{s.Value}
 }
@@ -147,4 +184,8 @@ func (s *Byte) ToBytes() []byte {
 func (s *Byte) Make(buf []byte, offset uint32) uint32 {
 	s.Value = buf[offset]
 	return 1
+}
+
+func (s *Byte) Len() uint32 {
+	return uint32(1)
 }
