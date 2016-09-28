@@ -30,23 +30,6 @@ func TestNewPage(t *testing.T) {
 	link, _ := os.OpenFile("/tmp/b", os.O_RDWR, 0666)
 	tree := NewPageTree(meta, link)
 
-	tree.Root = &Page{
-		Header:&PageHeaderDef{
-			PageID:slot.NewUnsignedInteger(0),
-			Type:slot.NewByte(TYPE_DATA_PAGE),
-			Level:slot.NewByte(0x00),
-			Pre:slot.NewUnsignedInteger(0),
-			Next:slot.NewUnsignedInteger(0),
-			Checksum:slot.NewUnsignedInteger(0),
-			LastModify:slot.NewUnsignedLong(0),
-		},
-		ItemSize:slot.NewUnsignedInteger(0),
-	}
-	tree.Root.Data = &DataPage{
-		Holder:tree.Root,
-
-	}
-
 	for i := 1; i <= 2; i++ {
 		r := row.NewRow(meta)
 		r.Fill(
@@ -100,7 +83,20 @@ func TestNewPage(t *testing.T) {
 	tree.Delete(uint32(5))
 	assert.Equal(t, getClusterKeyArrayFromRows(tree.Root), []uint32{uint32(3), uint32(4), uint32(7), uint32(9)})
 
-	str := "123走你"
-	print(len(str))
+	for i := 1; i < 200; i++ {
+		r := row.NewRow(meta)
+		r.Fill(
+			slot.NewString("skflksfsfdsjflsjfslfj"),
+			slot.NewInteger(int32(100)),
+			slot.NewString("内地"),
+			slot.NewDouble(float64(0.234242423423)),
+			slot.NewBoolean(true),
+			slot.NewString("卡卡老师封疆大吏舒服的沙发"),
+		)
+		r.ClusteredKey = slot.NewUnsignedInteger(uint32(i * 2 + 1))
+
+
+		tree.InsertOrUpdate(r)
+	}
 
 }

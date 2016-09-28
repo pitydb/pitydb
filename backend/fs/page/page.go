@@ -37,13 +37,13 @@ type Page struct {
 	fs.Persistent
 	Header     *PageHeaderDef
 
-	ItemSize   *slot.UnsignedInteger
+	ItemSize   *slot.UnsignedInteger //this counter is used to read data from disk
 	Pre        *Page
 	Next       *Page
 	Parent     *Page
 
 	Root       *PageTree
-	ByteLength uint32 //finger if the size is larger than 16kb
+	ByteLength uint32                //finger if the size is larger than 16kb
 
 	Data       PageContent
 }
@@ -74,10 +74,28 @@ type PageTree struct {
 }
 
 func NewPageTree(meta *row.RowMeta, link *os.File) *PageTree {
+	root := &Page{
+		Header:&PageHeaderDef{
+			PageID:slot.NewUnsignedInteger(0),
+			Type:slot.NewByte(TYPE_DATA_PAGE),
+			Level:slot.NewByte(0x00),
+			Pre:slot.NewUnsignedInteger(0),
+			Next:slot.NewUnsignedInteger(0),
+			Checksum:slot.NewUnsignedInteger(0),
+			LastModify:slot.NewUnsignedLong(0),
+		},
+		ItemSize:slot.NewUnsignedInteger(0),
+	}
+	root.Data = &DataPage{
+		Holder:root,
+	}
+
 	return &PageTree{
 		Meta:meta,
 		Link:link,
+		Root:root,
 	}
+
 }
 func (r *Page) ToBytes() []byte {
 	ret := r.Header.ToBytes()
@@ -90,6 +108,20 @@ func (r *DataPage) Make(buf []byte, offset uint32) uint32 {
 		idx += v.Make(buf, idx + offset)
 	}
 	return idx
+}
+func (p *Page) Insert(r *row.Row, index int, find bool) uint32 {
+	data := p.Data.(*DataPage)
+	bs := uint32(0)
+	bs = p.ByteLength + r.Len()
+	if find {
+		bs = bs - data.Content[index].Len()
+		data.Content[index] = r
+	}else {
+		data.Content = append(data.Content[:index], append([]*row.Row{r}, data.Content[index:]...)...)
+		p.ItemSize.Value++
+	}
+	p.ByteLength = bs
+	return bs
 }
 
 func (r *DataPage) ToBytes() []byte {
@@ -168,24 +200,21 @@ func (tree *PageTree) NewPage(typ byte, level byte) *Page {
 			LastModify:slot.NewUnsignedLong(0),
 		},
 		Root:tree,
-		ByteLength:slot.NewUnsignedInteger(0),
+		ByteLength:0,
 		ItemSize:slot.NewUnsignedInteger(0),
 
 
 	}
-	p.Data = func(typ byte) PageContent {
-		if typ == TYPE_DATA_PAGE {
-			return &DataPage{
-				Holder:p,
-				Content:[]*row.Row{},
-			}
-		}else if typ == TYPE_INDEX_PAGE {
-			return &IndexPage{
-				Holder:p,
-				Content:[]*IndexPageItem{},
-			}
+	if typ == TYPE_DATA_PAGE {
+		p.Data = &DataPage{
+			Holder:p,
+			Content:[]*row.Row{},
 		}
-		return nil
+	}else if typ == TYPE_INDEX_PAGE {
+		p.Data = &IndexPage{
+			Holder:p,
+			Content:[]*IndexPageItem{},
+		}
 	}
 	return p
 }
@@ -228,19 +257,26 @@ func (tree *PageTree) InsertOrUpdate(r *row.Row) {
 	data := node.Data.(*DataPage)
 	data.Holder = node
 
-	if find {
-		data.Content[idx] = r
-	}else {
-		bs := node.ByteLength + r.Len()
+	//the row is so big that one default can not hold it
+	if r.Len() > DEFAULT_PAGE_SIZE {
+		//TODO big row storage
+	}
+	bs := node.Insert(r, idx, find)
 
-		if bs <= DEFAULT_PAGE_SIZE {
-			data.Content = append(data.Content[:idx], append([]*row.Row{r}, data.Content[idx:]...)...)
-			node.ItemSize.Value++
-		}else {
-			//should split here
-			//newNode := tree.NewPage(TYPE_DATA_PAGE, 0)
+	if bs > DEFAULT_PAGE_SIZE {
+		println(bs)
+		//should split here
+		i := 0
+		counter := uint32(0)
+		for ; i < int(node.ItemSize.Value); i++ {
+			counter = counter + data.Content[i].Len()
+			if (counter > DEFAULT_PAGE_SIZE) {
+				break
+			}
 		}
-
+		//copy [i-1:] to newNode
+		//newNode := tree.NewPage(TYPE_DATA_PAGE, 0)
+		println("split...............")
 	}
 }
 
