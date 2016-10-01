@@ -22,7 +22,7 @@ type Page interface {
 }
 
 //4+1+4+4+8 = 21
-type PageHeaderDef struct {
+type PageHeader struct {
 	fs.Persistent
 	PageID     *slot.UnsignedInteger //4294967295.0*16/1024/1024/1024 ~= 63.99999998509884 TiB
 	Type       *slot.Byte
@@ -33,11 +33,9 @@ type PageHeaderDef struct {
 	LastModify *slot.UnsignedLong    //time.Now().UnixNano()
 	ItemSize   *slot.UnsignedInteger //this counter is used to read data from disk
 }
-type PageTailDef struct {
-}
 
 type PageRuntime struct {
-	Header     *PageHeaderDef
+	PageHeader
 
 	pre        Page
 	next       Page
@@ -48,13 +46,13 @@ type PageRuntime struct {
 }
 
 func (r PageRuntime) GetLevel() byte {
-	return r.Header.Level.Value
+	return r.Level.Value
 }
 func (r PageRuntime) GetItemSize() uint32 {
-	return r.Header.ItemSize.Value
+	return r.ItemSize.Value
 }
 
-func (r *PageHeaderDef) ToBytes() []byte {
+func (r *PageHeader) ToBytes() []byte {
 	ret := r.PageID.ToBytes()
 	ret = append(ret, r.Type.ToBytes()...)
 	ret = append(ret, r.Level.ToBytes()...)
@@ -65,7 +63,7 @@ func (r *PageHeaderDef) ToBytes() []byte {
 	return ret
 }
 
-func (r *PageHeaderDef) Make(buf []byte, offset uint32) uint32 {
+func (r *PageHeader) Make(buf []byte, offset uint32) uint32 {
 	idx := uint32(0)
 	idx += r.PageID.Make(buf, idx + offset)
 	idx += r.Type.Make(buf, idx + offset)

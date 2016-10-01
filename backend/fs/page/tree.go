@@ -15,7 +15,7 @@ type PageTree struct {
 func NewPageTree(meta *row.RowMeta, link *os.File) *PageTree {
 	root := &DataPage{
 		PageRuntime: PageRuntime{
-			Header:&PageHeaderDef{
+			PageHeader:PageHeader{
 				PageID:slot.NewUnsignedInteger(0),
 				Type:slot.NewByte(TYPE_DATA_PAGE),
 				Level:slot.NewByte(0x00),
@@ -41,7 +41,7 @@ func NewPageTree(meta *row.RowMeta, link *os.File) *PageTree {
 func (tree *PageTree) NewDataPage(level byte) *DataPage {
 	p := &DataPage{
 		PageRuntime:PageRuntime{
-			Header:&PageHeaderDef{
+			PageHeader:PageHeader{
 				PageID:slot.NewUnsignedInteger(1), //TODO next id
 				Type:slot.NewByte(TYPE_DATA_PAGE),
 				Level:slot.NewByte(level),
@@ -61,7 +61,7 @@ func (tree *PageTree) NewDataPage(level byte) *DataPage {
 func (tree *PageTree) NewIndexPage(level byte) *IndexPage {
 	p := &IndexPage{
 		PageRuntime:PageRuntime{
-			Header:&PageHeaderDef{
+			PageHeader:PageHeader{
 				PageID:slot.NewUnsignedInteger(1), //TODO next id
 				Type:slot.NewByte(TYPE_INDEX_PAGE),
 				Level:slot.NewByte(level),

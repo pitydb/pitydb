@@ -11,7 +11,7 @@ import (
 func getClusterKeyArrayFromRows(page Page) []uint32 {
 	debugarr := []uint32{}
 
-	if page.Runtime().Header.Type.Value == TYPE_DATA_PAGE {
+	if page.Runtime().Type.Value == TYPE_DATA_PAGE {
 		v := page.(*DataPage)
 		for _, rowinfo := range v.Content {
 			debugarr = append(debugarr, rowinfo.ClusteredKey.Value)

@@ -19,7 +19,7 @@ func (r *DataPage) Runtime() PageRuntime {
 
 func (r *DataPage) Make(buf []byte, offset uint32) uint32 {
 	idx := uint32(0)
-	idx = r.Header.Make(buf, idx + offset)
+	idx = r.PageHeader.Make(buf, idx + offset)
 	for _, v := range r.Content {
 		idx += v.Make(buf, idx + offset)
 	}
@@ -27,14 +27,14 @@ func (r *DataPage) Make(buf []byte, offset uint32) uint32 {
 }
 func (r *DataPage) ToBytes() []byte {
 	ret := make([]byte, 0)
-	ret = append(ret, r.Header.ToBytes()...)
+	ret = append(ret, r.PageHeader.ToBytes()...)
 	for _, v := range r.Content {
 		ret = append(ret, v.ToBytes()...)
 	}
 	return ret
 }
 func (d *DataPage) FindRow(key uint32) (Page, int, bool) {
-	val_len := int(d.Header.ItemSize.Value)
+	val_len := int(d.ItemSize.Value)
 
 	i := sort.Search(val_len, func(i int) bool {
 		return int(key) <= int(d.Content[i].ClusteredKey.Value)
@@ -64,7 +64,7 @@ func (p *DataPage) Insert(obj interface{}, index int, find bool) uint32 {
 		p.Content[index] = r
 	}else {
 		p.Content = append(p.Content[:index], append([]*row.Row{r}, p.Content[index:]...)...)
-		p.Header.ItemSize.Value++
+		p.ItemSize.Value++
 	}
 	p.byteLength = bs
 
@@ -94,13 +94,13 @@ func (p *DataPage) Insert(obj interface{}, index int, find bool) uint32 {
 
 func (p *DataPage) Delete(key uint32, index int) {
 	p.Content = append(p.Content[:index], p.Content[index + 1:]...)
-	p.Header.ItemSize.Value--
+	p.ItemSize.Value--
 	p.byteLength = p.Len()
 }
 
 func (p *DataPage) InsertRows(rs []*row.Row) {
 	p.Content = append(p.Content, rs...)
-	p.Header.ItemSize.Value = uint32(len(rs))
+	p.ItemSize.Value = uint32(len(rs))
 	p.byteLength = p.Len()
 }
 
@@ -113,9 +113,9 @@ func (p *DataPage) Len() uint32 {
 }
 
 func (p *DataPage) PageReduce(begin, end int) {
-	if p.Header.Type.Value == TYPE_DATA_PAGE {
+	if p.Type.Value == TYPE_DATA_PAGE {
 		p.Content = p.Content[begin:end]
-		p.Header.ItemSize.Value = uint32(end - begin)
+		p.ItemSize.Value = uint32(end - begin)
 		p.byteLength = p.Len()
 	}
 }
