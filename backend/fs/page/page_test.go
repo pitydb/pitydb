@@ -8,10 +8,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func getClusterKeyArrayFromRows(page *Page) []uint32 {
+func getClusterKeyArrayFromRows(page Page) []uint32 {
 	debugarr := []uint32{}
-	for _, rowinfo := range page.Data.(*DataPage).Content {
-		debugarr = append(debugarr, rowinfo.ClusteredKey.Value)
+
+	if page.Runtime().Header.Type.Value == TYPE_DATA_PAGE {
+		v := page.(*DataPage)
+		for _, rowinfo := range v.Content {
+			debugarr = append(debugarr, rowinfo.ClusteredKey.Value)
+		}
 	}
 	return debugarr
 }
@@ -42,9 +46,9 @@ func TestNewPage(t *testing.T) {
 		)
 		r.ClusteredKey = slot.NewUnsignedInteger(uint32(i * 2))
 
-		tree.InsertOrUpdate(r)
+		tree.InsertRow(r)
 	}
-	assert.Equal(t, getClusterKeyArrayFromRows(tree.Root), []uint32{uint32(2), uint32(4)})
+	assert.Equal(t, getClusterKeyArrayFromRows(tree.root), []uint32{uint32(2), uint32(4)})
 	for i := 1; i <= 2; i++ {
 		r := row.NewRow(meta)
 		r.Fill(
@@ -57,10 +61,10 @@ func TestNewPage(t *testing.T) {
 		)
 		r.ClusteredKey = slot.NewUnsignedInteger(uint32(i * 2))
 
-		tree.InsertOrUpdate(r)
+		tree.InsertRow(r)
 	}
 
-	assert.Equal(t, getClusterKeyArrayFromRows(tree.Root), []uint32{uint32(2), uint32(4)})
+	assert.Equal(t, getClusterKeyArrayFromRows(tree.root), []uint32{uint32(2), uint32(4)})
 	for i := 4; i > 0; i-- {
 		r := row.NewRow(meta)
 		r.Fill(
@@ -73,15 +77,15 @@ func TestNewPage(t *testing.T) {
 		)
 		r.ClusteredKey = slot.NewUnsignedInteger(uint32(i * 2 + 1))
 
-		tree.InsertOrUpdate(r)
+		tree.InsertRow(r)
 	}
-	assert.Equal(t, getClusterKeyArrayFromRows(tree.Root), []uint32{uint32(2), uint32(3), uint32(4), uint32(5), uint32(7), uint32(9)})
+	assert.Equal(t, getClusterKeyArrayFromRows(tree.root), []uint32{uint32(2), uint32(3), uint32(4), uint32(5), uint32(7), uint32(9)})
 	tree.Delete(uint32(1))
-	assert.Equal(t, getClusterKeyArrayFromRows(tree.Root), []uint32{uint32(2), uint32(3), uint32(4), uint32(5), uint32(7), uint32(9)})
+	assert.Equal(t, getClusterKeyArrayFromRows(tree.root), []uint32{uint32(2), uint32(3), uint32(4), uint32(5), uint32(7), uint32(9)})
 	tree.Delete(uint32(2))
-	assert.Equal(t, getClusterKeyArrayFromRows(tree.Root), []uint32{uint32(3), uint32(4), uint32(5), uint32(7), uint32(9)})
+	assert.Equal(t, getClusterKeyArrayFromRows(tree.root), []uint32{uint32(3), uint32(4), uint32(5), uint32(7), uint32(9)})
 	tree.Delete(uint32(5))
-	assert.Equal(t, getClusterKeyArrayFromRows(tree.Root), []uint32{uint32(3), uint32(4), uint32(7), uint32(9)})
+	assert.Equal(t, getClusterKeyArrayFromRows(tree.root), []uint32{uint32(3), uint32(4), uint32(7), uint32(9)})
 
 	for i := 1; i < 200; i++ {
 		r := row.NewRow(meta)
@@ -95,8 +99,7 @@ func TestNewPage(t *testing.T) {
 		)
 		r.ClusteredKey = slot.NewUnsignedInteger(uint32(i * 2 + 1))
 
-
-		tree.InsertOrUpdate(r)
+		tree.InsertRow(r)
 	}
 
 }
