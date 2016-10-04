@@ -1,36 +1,42 @@
 package network
 
 import (
-	"net"
-	"log"
 	"bufio"
+	"log"
+	"net"
+)
+
+const (
+	ServerChannel = iota
+	ClientChannel
 )
 
 type Channel struct {
-	//server     *Server
-	pipeline   *Pipeline
+	pipeline *Pipeline
+
 	writeBytes int
 	readBytes  int
-	socket     *net.TCPConn
-	buffIn     []byte
 
-	bufr       *bufio.Reader
-	bufw       *bufio.Writer
+	socket *net.TCPConn
+	buffIn []byte
+
+	bufr *bufio.Reader
+	bufw *bufio.Writer
 }
 
 func NewChannel(conn *net.TCPConn) *Channel {
 	chl := &Channel{
-		//server:server,
-		socket:conn,
-		bufr:bufio.NewReader(conn),
-		bufw:bufio.NewWriter(conn),
-		writeBytes:0,
-		readBytes:0,
-		buffIn:make([]byte, 8096),
+		socket:     conn,
+		bufr:       bufio.NewReader(conn),
+		bufw:       bufio.NewWriter(conn),
+		writeBytes: 0,
+		readBytes:  0,
+		buffIn:     make([]byte, 8096),
 	}
 
 	return chl
 }
+
 //func (this *Channel) Bind(tcpAddr *net.TCPAddr) error {
 //	receiveSocket, err := net.ListenTCP("tcp", tcpAddr)
 //	if nil != err {
@@ -49,8 +55,7 @@ func (this *Channel) Connect(tcpAddr *net.TCPAddr) error {
 	this.pipeline.FireConnect(this)
 	return nil
 }
-func (this *Channel) Ready() {}
-func (this *Channel) Reconnect() {}
+
 func (this *Channel) ReadLoop() {
 	defer this.Close()
 
@@ -61,33 +66,40 @@ func (this *Channel) ReadLoop() {
 			break
 		}
 
-		//log.Println("data read:", string(this.buffIn))
-
 		this.pipeline.FireRead(this, this.buffIn[:msgLen])
 		this.readBytes += msgLen
 	}
 }
+
 func (this *Channel) Write(data interface{}) (int, error) {
 	b := this.pipeline.FireWrite(this, data)
 	this.bufw.Write(b.([]byte))
 	this.bufw.Flush()
 	return 0, nil
 }
+
 func (this *Channel) Flush() error {
 	return this.bufw.Flush()
 }
+
 func (this *Channel) Close() {
 	log.Println("closing")
 	this.socket.Close()
 	this.pipeline.FireClose(this)
 }
+
 func (this *Channel) CloseForce() {
 	this.Close()
 }
-func (this *Channel) Type() {}
+
+func (this *Channel) Type() {
+
+}
+
 func (this *Channel) IsWriteable() bool {
 	return this.bufw.Available() > 0
 }
+
 func (this *Channel) IsReadable() bool {
 	return this.bufr.Buffered() > 0
 }
@@ -98,15 +110,17 @@ func (this *Channel) GetLocal() *net.TCPAddr {
 func (this *Channel) GetRemote() *net.TCPAddr {
 	return this.socket.RemoteAddr().(*net.TCPAddr)
 }
+
 func (this *Channel) GetReadBytes() int {
 	return this.readBytes
 }
+
 func (this *Channel) GetWriteBytes() int {
 	return this.writeBytes
 }
+
 func (this *Channel) IsOpen() bool {
-	//TODO
-	return true
+	return this.socket != nil
 }
 
 func (this *Channel) Pipeline() *Pipeline {

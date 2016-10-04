@@ -1,13 +1,13 @@
 package network
 
 import (
-	"testing"
-	"net"
-	"time"
 	"log"
+	"net"
+	"testing"
+	"time"
 )
 
-type  i_am_a_simple_handler struct {
+type i_am_a_simple_handler struct {
 }
 
 func (this i_am_a_simple_handler) OnRead(chl *Channel, packet Packet) ExchangePacket {
@@ -26,7 +26,7 @@ func (this i_am_a_simple_handler) OnClose(chl *Channel) {
 type myInitializer struct {
 }
 
-func (myInitializer *myInitializer) InitChannel(channel *Channel) error {
+func (myInitializer *myInitializer) Init(channel *Channel) error {
 	pipeline := NewPipeline()
 	pipeline.AddFirst("first", i_am_a_simple_handler{})
 	channel.SetPipeline(pipeline)

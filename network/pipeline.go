@@ -1,8 +1,8 @@
 package network
 
 import (
-	"container/list"
 	"bytes"
+	"container/list"
 	"fmt"
 )
 
@@ -16,30 +16,30 @@ type Pipeline struct {
 
 func NewPipeline() *Pipeline {
 	t := &Pipeline{
-		handlers:list.New(),
+		handlers: list.New(),
 	}
 	return t
 }
 
 func (this *Pipeline) AddFirst(name string, handler interface{}) {
 	item := &pipelineItem{
-		name:name,
-		handler:handler,
+		name:    name,
+		handler: handler,
 	}
 	this.handlers.PushFront(item)
 }
 func (this *Pipeline) AddLast(name string, handler interface{}) {
 	item := &pipelineItem{
-		name:name,
-		handler:handler,
+		name:    name,
+		handler: handler,
 	}
 	this.handlers.PushBack(item)
 }
 
 func (this *Pipeline) Replace(name string, handler interface{}) {
 	item := &pipelineItem{
-		name:name,
-		handler:handler,
+		name:    name,
+		handler: handler,
 	}
 	for e := this.handlers.Front(); e != nil; e = e.Next() {
 		if e.Value.(*pipelineItem).name == name {
@@ -61,6 +61,7 @@ func (this *Pipeline) Info() string {
 	}
 	return buff.String()
 }
+
 func (this *Pipeline) FireConnect(chl *Channel) {
 	for e := this.handlers.Front(); e != nil; e = e.Next() {
 		if evt, ok := e.Value.(*pipelineItem).handler.(ConnectEvent); ok {
