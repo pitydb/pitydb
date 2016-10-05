@@ -17,6 +17,10 @@ func (r *DataPage) Runtime() PageRuntime {
 	return r.PageRuntime
 }
 
+func (r *DataPage) GetMax() uint32 {
+	return r.Content[len(r.Content) - 1].ClusteredKey.Value
+}
+
 func (r *DataPage) Make(buf []byte, offset uint32) uint32 {
 	idx := uint32(0)
 	idx = r.PageHeader.Make(buf, idx + offset)
@@ -33,6 +37,7 @@ func (r *DataPage) ToBytes() []byte {
 	}
 	return ret
 }
+
 func (d *DataPage) FindRow(key uint32) (Page, int, bool) {
 	val_len := int(d.ItemSize.Value)
 
@@ -55,6 +60,7 @@ func (d *DataPage) FindRow(key uint32) (Page, int, bool) {
 	}
 	return d, i, false
 }
+
 func (p *DataPage) Insert(obj interface{}, index int, find bool) uint32 {
 	r := obj.(*row.Row)
 	bs := uint32(0)
@@ -81,12 +87,67 @@ func (p *DataPage) Insert(obj interface{}, index int, find bool) uint32 {
 
 		newNode := p.tree.NewDataPage(0)
 		//copy [i-1:] to newNode
-		newNode.InsertRows(p.Content[0:i - 1])
+		newNode.InsertRows(p.Content[i:])
 		//reduce the orig node
-		println(i)
-		p.PageReduce(0, i - 1)
+		p.PageReduce(0, i)
 
-		println("split...............")
+		//for _, xxx := range p.Content {
+		//	print(xxx.ClusteredKey.Value, ",")
+		//}
+		//print("#")
+		//for _, xxx := range newNode.Content {
+		//	print(xxx.ClusteredKey.Value, ",")
+		//}
+		//println("|", r.ClusteredKey.Value)
+		//it's the first time that root is full
+		if p.parent == nil {
+			newRoot := p.tree.NewIndexPage(p.Level.Value + 1)
+
+			indexRowForOld := NewIndexRow()
+			indexRowForOld.KeyPageId = p.PageID
+			indexRowForOld.KeyWordMark.Value = p.GetMax()
+			newRoot.Insert(indexRowForOld, 0, false)
+			p.parent = newRoot
+
+			indexRowForNew := NewIndexRow()
+			indexRowForNew.KeyPageId = newNode.PageID
+			indexRowForNew.KeyWordMark.Value = newNode.GetMax()
+			newRoot.Insert(indexRowForNew, 1, false)
+			newNode.parent = newRoot
+
+			p.tree.root = newRoot
+		}else {
+			indexRowForNew := NewIndexRow()
+			indexRowForNew.KeyPageId = newNode.PageID
+			indexRowForNew.KeyWordMark.Value = newNode.GetMax()
+
+			_, toIndex, _ := p.parent.(*IndexPage).FindIndexRow(r.ClusteredKey.Value)
+			newNode.parent = p.parent
+			p.parent.Insert(indexRowForNew, toIndex, false)
+		}
+		if nil != p.parent {
+			print("INSERT:", r.ClusteredKey.Value, "\t")
+			print("D", p.parent.Runtime().Level.Value)
+			for _, xxx := range p.parent.(*IndexPage).Content {
+				ux := p.tree.mgr.GetPage(xxx.KeyPageId.Value)
+				if ux.Runtime().Type.Value == TYPE_INDEX_PAGE {
+					vp := ux.(*IndexPage)
+					for _, px := range vp.Content {
+						print(px.KeyWordMark.Value, ",")
+					}
+					print(")")
+				}else if ux.Runtime().Type.Value == TYPE_DATA_PAGE {
+					vp := ux.(*DataPage)
+					print("(")
+					for _, px := range vp.Content {
+						print(px.ClusteredKey.Value, ",")
+					}
+					print(")")
+				}
+			}
+		}
+		println()
+
 	}
 
 	return bs
@@ -113,9 +174,7 @@ func (p *DataPage) Len() uint32 {
 }
 
 func (p *DataPage) PageReduce(begin, end int) {
-	if p.Type.Value == TYPE_DATA_PAGE {
-		p.Content = p.Content[begin:end]
-		p.ItemSize.Value = uint32(end - begin)
-		p.byteLength = p.Len()
-	}
+	p.Content = p.Content[begin:end]
+	p.ItemSize.Value = uint32(end - begin)
+	p.byteLength = p.Len()
 }

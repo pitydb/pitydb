@@ -5,7 +5,7 @@ import (
 	"github.com/lycying/pitydb/backend/fs/slot"
 )
 
-const DEFAULT_PAGE_SIZE = 1024 * 16
+const DEFAULT_PAGE_SIZE = 1024
 
 const (
 	TYPE_INDEX_PAGE byte = iota
@@ -18,6 +18,7 @@ type Page interface {
 	FindRow(key uint32) (Page, int, bool)
 	Insert(r interface{}, index int, find bool) uint32
 	Len() uint32
+	GetMax() uint32
 	Runtime() PageRuntime
 }
 
@@ -74,5 +75,4 @@ func (r *PageHeader) Make(buf []byte, offset uint32) uint32 {
 	idx += r.LastModify.Make(buf, idx + offset)
 	return idx
 }
-
 

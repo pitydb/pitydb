@@ -10,13 +10,15 @@ type PageTree struct {
 	root Page
 	meta *row.RowMeta
 	link *os.File
+	mgr  *PageMgr
 }
 
 func NewPageTree(meta *row.RowMeta, link *os.File) *PageTree {
+	mgr := NewPageMgr()
 	root := &DataPage{
 		PageRuntime: PageRuntime{
 			PageHeader:PageHeader{
-				PageID:slot.NewUnsignedInteger(0),
+				PageID:slot.NewUnsignedInteger(mgr.NextPageId()),
 				Type:slot.NewByte(TYPE_DATA_PAGE),
 				Level:slot.NewByte(0x00),
 				Pre:slot.NewUnsignedInteger(0),
@@ -31,18 +33,23 @@ func NewPageTree(meta *row.RowMeta, link *os.File) *PageTree {
 		Content:[]*row.Row{},
 	}
 
-	return &PageTree{
+	tree := &PageTree{
 		meta:meta,
 		link:link,
 		root:root,
+		mgr:mgr,
 	}
+	root.tree = tree
+
+	tree.mgr.AddPage(root)
+	return tree
 
 }
 func (tree *PageTree) NewDataPage(level byte) *DataPage {
 	p := &DataPage{
 		PageRuntime:PageRuntime{
 			PageHeader:PageHeader{
-				PageID:slot.NewUnsignedInteger(1), //TODO next id
+				PageID:slot.NewUnsignedInteger(tree.mgr.NextPageId()),
 				Type:slot.NewByte(TYPE_DATA_PAGE),
 				Level:slot.NewByte(level),
 				Pre:slot.NewUnsignedInteger(0),
@@ -56,13 +63,14 @@ func (tree *PageTree) NewDataPage(level byte) *DataPage {
 		},
 		Content:[]*row.Row{},
 	}
+	tree.mgr.AddPage(p)
 	return p
 }
 func (tree *PageTree) NewIndexPage(level byte) *IndexPage {
 	p := &IndexPage{
 		PageRuntime:PageRuntime{
 			PageHeader:PageHeader{
-				PageID:slot.NewUnsignedInteger(1), //TODO next id
+				PageID:slot.NewUnsignedInteger(tree.mgr.NextPageId()),
 				Type:slot.NewByte(TYPE_INDEX_PAGE),
 				Level:slot.NewByte(level),
 				Pre:slot.NewUnsignedInteger(0),
@@ -76,6 +84,7 @@ func (tree *PageTree) NewIndexPage(level byte) *IndexPage {
 		},
 		Content:[]*IndexRow{},
 	}
+	tree.mgr.AddPage(p)
 	return p
 }
 

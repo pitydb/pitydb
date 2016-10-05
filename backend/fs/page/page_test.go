@@ -87,7 +87,7 @@ func TestNewPage(t *testing.T) {
 	tree.Delete(uint32(5))
 	assert.Equal(t, getClusterKeyArrayFromRows(tree.root), []uint32{uint32(3), uint32(4), uint32(7), uint32(9)})
 
-	for i := 1; i < 200; i++ {
+	for i := 1; i < 100; i++ {
 		r := row.NewRow(meta)
 		r.Fill(
 			slot.NewString("skflksfsfdsjflsjfslfj"),
@@ -97,9 +97,13 @@ func TestNewPage(t *testing.T) {
 			slot.NewBoolean(true),
 			slot.NewString("卡卡老师封疆大吏舒服的沙发"),
 		)
-		r.ClusteredKey = slot.NewUnsignedInteger(uint32(i * 2 + 1))
+		r.ClusteredKey = slot.NewUnsignedInteger(uint32(i))
 
 		tree.InsertRow(r)
+	}
+	for i := 1; i < 2; i++ {
+		pg, idx, found := tree.FindRow(uint32(i))
+		println(pg, idx, found)
 	}
 
 }
