@@ -18,7 +18,7 @@ func (r *DataPage) Runtime() PageRuntime {
 }
 
 func (r *DataPage) GetMax() uint32 {
-	return r.Content[len(r.Content) - 1].ClusteredKey.Value
+	return r.Content[0].ClusteredKey.Value
 }
 
 func (r *DataPage) Make(buf []byte, offset uint32) uint32 {
@@ -42,7 +42,7 @@ func (d *DataPage) FindRow(key uint32) (Page, int, bool) {
 	val_len := int(d.ItemSize.Value)
 
 	i := sort.Search(val_len, func(i int) bool {
-		return int(key) <= int(d.Content[i].ClusteredKey.Value)
+		return key <= d.Content[i].ClusteredKey.Value
 	})
 	//the rows is empty
 	if i == 0 && val_len == 0 {
@@ -121,32 +121,11 @@ func (p *DataPage) Insert(obj interface{}, index int, find bool) uint32 {
 			indexRowForNew.KeyPageId = newNode.PageID
 			indexRowForNew.KeyWordMark.Value = newNode.GetMax()
 
-			_, toIndex, _ := p.parent.(*IndexPage).FindIndexRow(r.ClusteredKey.Value)
+			_, toIndex, _ := p.parent.(*IndexPage).FindIndexRow(indexRowForNew.KeyWordMark.Value)
+			println(p.tree.root.GetMax(),p.parent.GetMax(),toIndex)
 			newNode.parent = p.parent
 			p.parent.Insert(indexRowForNew, toIndex, false)
 		}
-		if nil != p.parent {
-			print("INSERT:", r.ClusteredKey.Value, "\t")
-			print("D", p.parent.Runtime().Level.Value)
-			for _, xxx := range p.parent.(*IndexPage).Content {
-				ux := p.tree.mgr.GetPage(xxx.KeyPageId.Value)
-				if ux.Runtime().Type.Value == TYPE_INDEX_PAGE {
-					vp := ux.(*IndexPage)
-					for _, px := range vp.Content {
-						print(px.KeyWordMark.Value, ",")
-					}
-					print(")")
-				}else if ux.Runtime().Type.Value == TYPE_DATA_PAGE {
-					vp := ux.(*DataPage)
-					print("(")
-					for _, px := range vp.Content {
-						print(px.ClusteredKey.Value, ",")
-					}
-					print(")")
-				}
-			}
-		}
-		println()
 
 	}
 

@@ -97,6 +97,7 @@ func (tree *PageTree) InsertRow(r *row.Row) {
 	if r.Len() > DEFAULT_PAGE_SIZE {
 		//TODO big row storage
 	}
+	println("Insert At:", key, node.Runtime().PageID.Value)
 	node.Insert(r, idx, find)
 
 }

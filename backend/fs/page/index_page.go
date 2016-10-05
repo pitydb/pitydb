@@ -44,7 +44,7 @@ func NewIndexRow() *IndexRow {
 }
 
 func (r *IndexPage) GetMax() uint32 {
-	return r.Content[len(r.Content) - 1].KeyWordMark.Value
+	return r.Content[0].KeyWordMark.Value
 }
 func (r *IndexPage) Runtime() PageRuntime {
 	return r.PageRuntime
@@ -58,7 +58,7 @@ func (p *IndexPage) FindIndexRow(key uint32) (Page, int, bool) {
 	val_len := len(p.Content)
 
 	i := sort.Search(val_len, func(i int) bool {
-		return int(key) <= int(p.Content[i].KeyWordMark.Value)
+		return key <= p.Content[i].KeyWordMark.Value
 	})
 
 	//the rows is empty
@@ -71,7 +71,6 @@ func (p *IndexPage) FindIndexRow(key uint32) (Page, int, bool) {
 		i = val_len
 	}
 
-
 	return p, i, true
 
 }
@@ -82,6 +81,7 @@ func (p *IndexPage) FindRow(key uint32) (Page, int, bool) {
 	if i >= len(p.Content) {
 		i = len(p.Content) - 1
 	}
+
 	next := p.tree.mgr.GetPage(p.Content[i].KeyPageId.Value)
 
 	return next.FindRow(key)
@@ -102,14 +102,10 @@ func (p *IndexPage) Insert(obj interface{}, index int, find bool) uint32 {
 	bs := uint32(0)
 	bs = p.byteLength + r.Len()
 
-	if index >= int(p.ItemSize.Value) {
-		p.Content = append(p.Content, r)
-	}else {
-		p.Content = append(p.Content[:index], append([]*IndexRow{r}, p.Content[index:]...)...)
-	}
+	p.Content = append(p.Content[:index], append([]*IndexRow{r}, p.Content[index:]...)...)
 	p.ItemSize.Value++
-
 	p.byteLength = bs
+
 	if bs > DEFAULT_PAGE_SIZE / 32 {
 
 		//should split here
@@ -121,6 +117,7 @@ func (p *IndexPage) Insert(obj interface{}, index int, find bool) uint32 {
 				break
 			}
 		}
+
 
 		newNode := p.tree.NewIndexPage(p.Level.Value + 1)
 		//copy [i-1:] to newNode
@@ -150,7 +147,25 @@ func (p *IndexPage) Insert(obj interface{}, index int, find bool) uint32 {
 			indexRowForNew.KeyPageId = newNode.PageID
 			indexRowForNew.KeyWordMark.Value = newNode.GetMax()
 
-			_, toIndex, _ := p.parent.(*IndexPage).FindIndexRow(r.KeyWordMark.Value)
+			_, toIndex, _ := p.parent.(*IndexPage).FindIndexRow(indexRowForNew.KeyWordMark.Value)
+			print("@@", toIndex," ",r.KeyWordMark.Value)
+			for _, xxx := range p.parent.(*IndexPage).Content {
+				ux := p.tree.mgr.GetPage(xxx.KeyPageId.Value)
+				if ux.Runtime().Type.Value == TYPE_INDEX_PAGE {
+					vp := ux.(*IndexPage)
+					print(" ", vp.PageID.Value)
+					print("[")
+					for _, px := range vp.Content {
+						print(px.KeyWordMark.Value, ",")
+					}
+					print("]")
+				}
+			}
+			print("##")
+			for _,xx := range p.Content{
+				print(xx.KeyWordMark.Value, ",")
+			}
+			println()
 			p.parent.Insert(indexRowForNew, toIndex, false)
 			newNode.parent = p.parent
 		}
