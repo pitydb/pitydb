@@ -3,7 +3,6 @@ package page
 import (
 	"github.com/lycying/pitydb/backend/fs/slot"
 	"github.com/lycying/pitydb/backend/fs"
-	"sort"
 )
 
 type IndexRow struct {
@@ -55,34 +54,51 @@ func (r *IndexPage) Len() uint32 {
 }
 
 func (p *IndexPage) FindIndexRow(key uint32) (Page, int, bool) {
-	val_len := len(p.Content)
 
-	i := sort.Search(val_len, func(i int) bool {
-		return key <= p.Content[i].KeyWordMark.Value
-	})
+	count := 0
 
-	//the rows is empty
-	if i == 0 && val_len == 0 {
-		return nil, 0, false
+	slen := len(p.Content) - 1
+	for i := slen; i >= 0; i-- {
+		count = i
+		if key > p.Content[i].KeyWordMark.Value {
+			break
+		}
 	}
+	return p, count + 1, true
 
-	//should put at the tail of the row array
-	if i >= val_len {
-		i = val_len
-	}
-
-	return p, i, true
+	//
+	//val_len := len(p.Content)
+	//
+	//i := sort.Search(val_len, func(i int) bool {
+	//	return key <= p.Content[i].KeyWordMark.Value
+	//})
+	//
+	////the rows is empty
+	//if i == 0 && val_len == 0 {
+	//	return nil, 0, false
+	//}
+	//
+	////should put at the tail of the row array
+	//if i >= val_len {
+	//	i = val_len
+	//}
+	//
+	//return p, i, true
 
 }
 
 func (p *IndexPage) FindRow(key uint32) (Page, int, bool) {
-	_, i, _ := p.FindIndexRow(key)
+	count := 0
 
-	if i >= len(p.Content) {
-		i = len(p.Content) - 1
+	size := len(p.Content) - 1
+	for i := size; i >= 0; i-- {
+		count = i
+		if key >= p.Content[i].KeyWordMark.Value {
+			break
+		}
 	}
 
-	next := p.tree.mgr.GetPage(p.Content[i].KeyPageId.Value)
+	next := p.tree.mgr.GetPage(p.Content[count].KeyPageId.Value)
 
 	return next.FindRow(key)
 
@@ -97,7 +113,7 @@ func (p *IndexPage) PageReduce(begin, end int) {
 	p.ItemSize.Value = uint32(end - begin)
 	p.byteLength = p.Len()
 }
-func (p *IndexPage) Insert(obj interface{}, index int, find bool) uint32 {
+func (p *IndexPage) Insert(obj interface{}, index int, find bool) (Page, uint32) {
 	r := obj.(*IndexRow)
 	bs := uint32(0)
 	bs = p.byteLength + r.Len()
@@ -117,7 +133,6 @@ func (p *IndexPage) Insert(obj interface{}, index int, find bool) uint32 {
 				break
 			}
 		}
-
 
 		newNode := p.tree.NewIndexPage(p.Level.Value + 1)
 		//copy [i-1:] to newNode
@@ -148,53 +163,12 @@ func (p *IndexPage) Insert(obj interface{}, index int, find bool) uint32 {
 			indexRowForNew.KeyWordMark.Value = newNode.GetMax()
 
 			_, toIndex, _ := p.parent.(*IndexPage).FindIndexRow(indexRowForNew.KeyWordMark.Value)
-			print("@@", toIndex," ",r.KeyWordMark.Value)
-			for _, xxx := range p.parent.(*IndexPage).Content {
-				ux := p.tree.mgr.GetPage(xxx.KeyPageId.Value)
-				if ux.Runtime().Type.Value == TYPE_INDEX_PAGE {
-					vp := ux.(*IndexPage)
-					print(" ", vp.PageID.Value)
-					print("[")
-					for _, px := range vp.Content {
-						print(px.KeyWordMark.Value, ",")
-					}
-					print("]")
-				}
-			}
-			print("##")
-			for _,xx := range p.Content{
-				print(xx.KeyWordMark.Value, ",")
-			}
-			println()
-			p.parent.Insert(indexRowForNew, toIndex, false)
-			newNode.parent = p.parent
+			myParent, _ := p.parent.Insert(indexRowForNew, toIndex, false)
+			newNode.parent = myParent
 		}
-
-		if nil != p.parent {
-			print("insert:", r.KeyWordMark.Value, "\t")
-			print("L", p.parent.Runtime().Level.Value)
-			for _, xxx := range p.parent.(*IndexPage).Content {
-				ux := p.tree.mgr.GetPage(xxx.KeyPageId.Value)
-				if ux.Runtime().Type.Value == TYPE_INDEX_PAGE {
-					vp := ux.(*IndexPage)
-					print(" ", vp.PageID.Value)
-					print("(")
-					for _, px := range vp.Content {
-						print(px.KeyWordMark.Value, ",")
-					}
-					print(")")
-				}else if ux.Runtime().Type.Value == TYPE_DATA_PAGE {
-					vp := ux.(*DataPage)
-					print("(")
-					for _, px := range vp.Content {
-						print(px.ClusteredKey.Value, ",")
-					}
-					print(")")
-				}
-			}
-		}
-		println()
+		return newNode, bs
 	}
 
-	return bs
+	p.tree.Dump()
+	return p, bs
 }

@@ -61,7 +61,7 @@ func (d *DataPage) FindRow(key uint32) (Page, int, bool) {
 	return d, i, false
 }
 
-func (p *DataPage) Insert(obj interface{}, index int, find bool) uint32 {
+func (p *DataPage) Insert(obj interface{}, index int, find bool) (Page,uint32) {
 	r := obj.(*row.Row)
 	bs := uint32(0)
 	bs = p.byteLength + r.Len()
@@ -122,14 +122,14 @@ func (p *DataPage) Insert(obj interface{}, index int, find bool) uint32 {
 			indexRowForNew.KeyWordMark.Value = newNode.GetMax()
 
 			_, toIndex, _ := p.parent.(*IndexPage).FindIndexRow(indexRowForNew.KeyWordMark.Value)
-			println(p.tree.root.GetMax(),p.parent.GetMax(),toIndex)
-			newNode.parent = p.parent
-			p.parent.Insert(indexRowForNew, toIndex, false)
+			myParent, _ := p.parent.Insert(indexRowForNew, toIndex, false)
+			newNode.parent = myParent
 		}
 
 	}
+	p.tree.Dump()
 
-	return bs
+	return p,bs
 }
 
 func (p *DataPage) Delete(key uint32, index int) {

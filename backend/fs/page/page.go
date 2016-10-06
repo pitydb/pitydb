@@ -16,7 +16,7 @@ type Page interface {
 	fs.Persistent
 
 	FindRow(key uint32) (Page, int, bool)
-	Insert(r interface{}, index int, find bool) uint32
+	Insert(r interface{}, index int, find bool) (Page,uint32)
 	Len() uint32
 	GetMax() uint32
 	Runtime() PageRuntime

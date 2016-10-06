@@ -97,7 +97,7 @@ func (tree *PageTree) InsertRow(r *row.Row) {
 	if r.Len() > DEFAULT_PAGE_SIZE {
 		//TODO big row storage
 	}
-	println("Insert At:", key, node.Runtime().PageID.Value)
+	println(key, "Insert At Page:", node.Runtime().PageID.Value)
 	node.Insert(r, idx, find)
 
 }
@@ -111,4 +111,45 @@ func (tree *PageTree) Delete(key uint32) bool {
 }
 func (tree *PageTree) FindRow(key uint32) (Page, int, bool) {
 	return tree.root.FindRow(key)
+}
+
+func (tree *PageTree) Dump() {
+	println("BEGIN")
+	root := tree.root
+	dumpPage(root)
+	println("END")
+	println("")
+}
+func _getParent(pg Page) uint32{
+	if pg.Runtime().parent == nil{
+		return 0
+	}else{
+		return pg.Runtime().parent.Runtime().PageID.Value
+	}
+}
+func dumpPage(pg Page) {
+	if nil == pg {
+		return
+	}
+	if pg.Runtime().Type.Value == TYPE_DATA_PAGE {
+		v := pg.(*DataPage)
+		print("D",v.PageID.Value,"-",_getParent(v),"\t:(")
+		for _, x := range v.Content {
+			print(x.ClusteredKey.Value, ",")
+		}
+		print(")")
+		println()
+	}else {
+		v := pg.(*IndexPage)
+		print("I",v.PageID.Value,"-",_getParent(v),"\t:[")
+		for _, x := range v.Content {
+			print(x.KeyWordMark.Value, ",")
+		}
+		print("]")
+		println()
+		for _, x := range v.Content {
+			px := v.tree.mgr.GetPage(x.KeyPageId.Value)
+			dumpPage(px)
+		}
+	}
 }

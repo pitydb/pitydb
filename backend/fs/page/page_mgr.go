@@ -21,6 +21,8 @@ func (mgr *PageMgr) GetPage(pageId uint32) Page {
 	v, ok := mgr.pageMap[pageId]
 	if ok {
 		return v
+	}else {
+		println("FUCK.................",pageId)
 	}
 	//TODO read it from disk
 	return v
