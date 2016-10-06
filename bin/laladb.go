@@ -8,10 +8,13 @@ import (
 	"runtime/debug"
 	"fmt"
 	"time"
+	"github.com/lycying/pitydb/web"
 )
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	web.Start()
 
 	var s = make(chan os.Signal, 1)
 	signal.Notify(s, syscall.SIGKILL, syscall.SIGUSR1)
