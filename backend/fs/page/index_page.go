@@ -57,16 +57,16 @@ func (p *IndexPage) FindIndexRow(key uint32) (Page, int, bool) {
 
 	count := 0
 
-	slen := len(p.Content) - 1
-	for i := slen; i >= 0; i-- {
+	size := len(p.Content)
+	for i := size - 1; i >= 0; i-- {
 		count = i
-		if key > p.Content[i].KeyWordMark.Value {
+		if key >= p.Content[i].KeyWordMark.Value {
 			break
 		}
 	}
 	return p, count + 1, true
 
-	//
+
 	//val_len := len(p.Content)
 	//
 	//i := sort.Search(val_len, func(i int) bool {
@@ -88,16 +88,9 @@ func (p *IndexPage) FindIndexRow(key uint32) (Page, int, bool) {
 }
 
 func (p *IndexPage) FindRow(key uint32) (Page, int, bool) {
-	count := 0
+	_, count, _ := p.FindIndexRow(key)
 
-	size := len(p.Content) - 1
-	for i := size; i >= 0; i-- {
-		count = i
-		if key >= p.Content[i].KeyWordMark.Value {
-			break
-		}
-	}
-
+	count = count - 1
 	next := p.tree.mgr.GetPage(p.Content[count].KeyPageId.Value)
 
 	return next.FindRow(key)
@@ -122,14 +115,14 @@ func (p *IndexPage) Insert(obj interface{}, index int, find bool) (Page, uint32)
 	p.ItemSize.Value++
 	p.byteLength = bs
 
-	if bs > DEFAULT_PAGE_SIZE / 32 {
+	if bs > DEFAULT_PAGE_SIZE {
 
 		//should split here
 		i := 0
 		counter := uint32(0)
 		for ; i < int(p.Runtime().GetItemSize()); i++ {
 			counter = counter + p.Content[i].Len()
-			if (counter > DEFAULT_PAGE_SIZE / 32) {
+			if (counter > DEFAULT_PAGE_SIZE ) {
 				break
 			}
 		}
@@ -165,10 +158,8 @@ func (p *IndexPage) Insert(obj interface{}, index int, find bool) (Page, uint32)
 			_, toIndex, _ := p.parent.(*IndexPage).FindIndexRow(indexRowForNew.KeyWordMark.Value)
 			myParent, _ := p.parent.Insert(indexRowForNew, toIndex, false)
 			newNode.parent = myParent
+			return newNode, bs
 		}
-		return newNode, bs
 	}
-
-	p.tree.Dump()
 	return p, bs
 }

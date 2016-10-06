@@ -61,7 +61,7 @@ func (d *DataPage) FindRow(key uint32) (Page, int, bool) {
 	return d, i, false
 }
 
-func (p *DataPage) Insert(obj interface{}, index int, find bool) (Page,uint32) {
+func (p *DataPage) Insert(obj interface{}, index int, find bool) (Page, uint32) {
 	r := obj.(*row.Row)
 	bs := uint32(0)
 	bs = p.byteLength + r.Len()
@@ -91,15 +91,6 @@ func (p *DataPage) Insert(obj interface{}, index int, find bool) (Page,uint32) {
 		//reduce the orig node
 		p.PageReduce(0, i)
 
-		//for _, xxx := range p.Content {
-		//	print(xxx.ClusteredKey.Value, ",")
-		//}
-		//print("#")
-		//for _, xxx := range newNode.Content {
-		//	print(xxx.ClusteredKey.Value, ",")
-		//}
-		//println("|", r.ClusteredKey.Value)
-		//it's the first time that root is full
 		if p.parent == nil {
 			newRoot := p.tree.NewIndexPage(p.Level.Value + 1)
 
@@ -127,9 +118,7 @@ func (p *DataPage) Insert(obj interface{}, index int, find bool) (Page,uint32) {
 		}
 
 	}
-	p.tree.Dump()
-
-	return p,bs
+	return p, bs
 }
 
 func (p *DataPage) Delete(key uint32, index int) {
