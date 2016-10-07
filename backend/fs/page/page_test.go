@@ -3,7 +3,6 @@ package page
 import (
 	"testing"
 	"github.com/lycying/pitydb/backend/fs/slot"
-	"github.com/lycying/pitydb/backend/fs/row"
 	"os"
 	"github.com/stretchr/testify/assert"
 )
@@ -20,22 +19,22 @@ func getClusterKeyArrayFromRows(page Page) []uint32 {
 	return debugarr
 }
 func TestNewPage(t *testing.T) {
-	meta := &row.RowMeta{
+	meta := &RowMeta{
 		Type:slot.ST_ROOT,
-		Children:[]*row.RowMeta{
-			&row.RowMeta{Type:slot.ST_STRING},
-			&row.RowMeta{Type:slot.ST_INTEGER},
-			&row.RowMeta{Type:slot.ST_STRING},
-			&row.RowMeta{Type:slot.ST_DOUBLE},
-			&row.RowMeta{Type:slot.ST_BOOL},
-			&row.RowMeta{Type:slot.ST_STRING},
+		Children:[]*RowMeta{
+			&RowMeta{Type:slot.ST_STRING},
+			&RowMeta{Type:slot.ST_INTEGER},
+			&RowMeta{Type:slot.ST_STRING},
+			&RowMeta{Type:slot.ST_DOUBLE},
+			&RowMeta{Type:slot.ST_BOOL},
+			&RowMeta{Type:slot.ST_STRING},
 		},
 	}
 	link, _ := os.OpenFile("/tmp/b", os.O_RDWR, 0666)
 	tree := NewPageTree(meta, link)
 
 	for i := 1; i <= 2; i++ {
-		r := row.NewRow(meta)
+		r := NewRow(meta)
 		r.Fill(
 			slot.NewString("skflksfsfdsjflsjfslfj"),
 			slot.NewInteger(int32(100)),
@@ -50,7 +49,7 @@ func TestNewPage(t *testing.T) {
 	}
 	assert.Equal(t, getClusterKeyArrayFromRows(tree.root), []uint32{uint32(2), uint32(4)})
 	for i := 1; i <= 2; i++ {
-		r := row.NewRow(meta)
+		r := NewRow(meta)
 		r.Fill(
 			slot.NewString("skflksfsfdsjflsjfslfj"),
 			slot.NewInteger(int32(100)),
@@ -66,7 +65,7 @@ func TestNewPage(t *testing.T) {
 
 	assert.Equal(t, getClusterKeyArrayFromRows(tree.root), []uint32{uint32(2), uint32(4)})
 	for i := 4; i > 0; i-- {
-		r := row.NewRow(meta)
+		r := NewRow(meta)
 		r.Fill(
 			slot.NewString("skflksfsfdsjflsjfslfj"),
 			slot.NewInteger(int32(100)),
@@ -87,8 +86,8 @@ func TestNewPage(t *testing.T) {
 	tree.Delete(uint32(5))
 	assert.Equal(t, getClusterKeyArrayFromRows(tree.root), []uint32{uint32(3), uint32(4), uint32(7), uint32(9)})
 
-	for i := 1; i < 10000000; i++ {
-		r := row.NewRow(meta)
+	for i := 1; i < 10000; i++ {
+		r := NewRow(meta)
 		r.Fill(
 			slot.NewString("skflksfsfdsjflsjfslfj"),
 			slot.NewInteger(int32(100)),
@@ -101,8 +100,8 @@ func TestNewPage(t *testing.T) {
 
 		tree.InsertRow(r)
 	}
-	tree.Dump(0)
-	for i := 1; i < 10000000; i++ {
+	tree.Dump(1)
+	for i := 1; i < 10000; i++ {
 		_, _, found := tree.FindRow(uint32(i))
 		assert.Equal(t, found, true)
 	}

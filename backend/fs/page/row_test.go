@@ -1,4 +1,4 @@
-package row
+package page
 
 import (
 	"github.com/stretchr/testify/assert"

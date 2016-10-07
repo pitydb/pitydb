@@ -2,18 +2,17 @@ package page
 
 import (
 	"os"
-	"github.com/lycying/pitydb/backend/fs/row"
 	"github.com/lycying/pitydb/backend/fs/slot"
 )
 
 type PageTree struct {
 	root Page
-	meta *row.RowMeta
+	meta *RowMeta
 	link *os.File
 	mgr  *PageMgr
 }
 
-func NewPageTree(meta *row.RowMeta, link *os.File) *PageTree {
+func NewPageTree(meta *RowMeta, link *os.File) *PageTree {
 	mgr := NewPageMgr()
 	root := &DataPage{
 		PageRuntime: PageRuntime{
@@ -30,7 +29,7 @@ func NewPageTree(meta *row.RowMeta, link *os.File) *PageTree {
 			byteLength:uint32(0),
 			parent:nil,
 		},
-		Content:[]*row.Row{},
+		Content:[]*Row{},
 	}
 
 	tree := &PageTree{
@@ -61,7 +60,7 @@ func (tree *PageTree) NewDataPage(level byte) *DataPage {
 			tree:tree,
 			byteLength:0,
 		},
-		Content:[]*row.Row{},
+		Content:[]*Row{},
 	}
 	tree.mgr.AddPage(p)
 	return p
@@ -88,7 +87,7 @@ func (tree *PageTree) NewIndexPage(level byte) *IndexPage {
 	return p
 }
 
-func (tree *PageTree) InsertRow(r *row.Row) {
+func (tree *PageTree) InsertRow(r *Row) {
 	key := r.ClusteredKey.Value
 
 	node, idx, find := tree.FindRow(key)

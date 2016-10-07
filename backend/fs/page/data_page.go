@@ -2,30 +2,34 @@ package page
 
 import (
 	"sort"
-	"github.com/lycying/pitydb/backend/fs/row"
 )
 
+// DataPage 代表聚类行式存储块，作为最终的索引叶子节点，层级始终为0，其中存储的为多行数据
+// Page代表一组统一的块操作，PageRuntime为其代表的数据描述。Content为行内容
 type DataPage struct {
 	Page
 
 	PageRuntime
 
-	Content []*row.Row //the tuple data
+	Content []*Row //the tuple data
 }
 
+// Runtime 得到运行描述
 func (r *DataPage) Runtime() PageRuntime {
 	return r.PageRuntime
 }
 
+// GetMax 得到页中最小的数字
 func (r *DataPage) GetMax() uint32 {
 	return r.Content[0].ClusteredKey.Value
 }
 
+// Make 通过读取数据块中的数据来填充私有数据
 func (r *DataPage) Make(buf []byte, offset uint32) uint32 {
 	idx := uint32(0)
-	idx = r.PageHeader.Make(buf, idx + offset)
+	idx = r.PageHeader.Make(buf, idx+offset)
 	for _, v := range r.Content {
-		idx += v.Make(buf, idx + offset)
+		idx += v.Make(buf, idx+offset)
 	}
 	return idx
 }
@@ -62,14 +66,14 @@ func (d *DataPage) FindRow(key uint32) (Page, int, bool) {
 }
 
 func (p *DataPage) Insert(obj interface{}, index int, find bool) (Page, uint32) {
-	r := obj.(*row.Row)
+	r := obj.(*Row)
 	bs := uint32(0)
 	bs = p.byteLength + r.Len()
 	if find {
 		bs = bs - p.Content[index].Len()
 		p.Content[index] = r
-	}else {
-		p.Content = append(p.Content[:index], append([]*row.Row{r}, p.Content[index:]...)...)
+	} else {
+		p.Content = append(p.Content[:index], append([]*Row{r}, p.Content[index:]...)...)
 		p.ItemSize.Value++
 	}
 	p.byteLength = bs
@@ -80,7 +84,7 @@ func (p *DataPage) Insert(obj interface{}, index int, find bool) (Page, uint32) 
 		counter := uint32(0)
 		for ; i < int(p.Runtime().GetItemSize()); i++ {
 			counter = counter + p.Content[i].Len()
-			if (counter > DEFAULT_PAGE_SIZE) {
+			if counter > DEFAULT_PAGE_SIZE {
 				break
 			}
 		}
@@ -107,7 +111,7 @@ func (p *DataPage) Insert(obj interface{}, index int, find bool) (Page, uint32) 
 			newNode.parent = newRoot
 
 			p.tree.root = newRoot
-		}else {
+		} else {
 			indexRowForNew := NewIndexRow()
 			indexRowForNew.KeyPageId = newNode.PageID
 			indexRowForNew.KeyWordMark.Value = newNode.GetMax()
@@ -122,12 +126,12 @@ func (p *DataPage) Insert(obj interface{}, index int, find bool) (Page, uint32) 
 }
 
 func (p *DataPage) Delete(key uint32, index int) {
-	p.Content = append(p.Content[:index], p.Content[index + 1:]...)
+	p.Content = append(p.Content[:index], p.Content[index+1:]...)
 	p.ItemSize.Value--
 	p.byteLength = p.Len()
 }
 
-func (p *DataPage) InsertRows(rs []*row.Row) {
+func (p *DataPage) InsertRows(rs []*Row) {
 	p.Content = append(p.Content, rs...)
 	p.ItemSize.Value = uint32(len(rs))
 	p.byteLength = p.Len()

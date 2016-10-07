@@ -1,4 +1,4 @@
-package row
+package page
 
 import (
 	"github.com/lycying/pitydb/backend/fs/slot"
@@ -50,7 +50,7 @@ func (r *Row) Fill(slots ...slot.Slot) {
 	}
 }
 
-func (r *Row) Len() uint32{
+func (r *Row) Len() uint32 {
 	ret := uint32(0)
 	for _, v := range r.Data {
 		ret += v.Len()
