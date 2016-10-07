@@ -11,17 +11,17 @@ type RowMeta struct {
 }
 type Row struct {
 	fs.Persistent
-	Meta         *RowMeta              //meta data for loop data
+	Meta *RowMeta              //meta data for loop data
 
-	ClusteredKey *slot.UnsignedInteger //the key used for b+ tree
+	Key  *slot.UnsignedInteger //the key used for b+ tree
 
-	Data         []slot.Slot           //the data part
+	Data []slot.Slot           //the data part
 }
 
 func NewRow(meta *RowMeta) *Row {
 	return &Row{
 		Meta:meta,
-		ClusteredKey:slot.NewUnsignedInteger(0),
+		Key:slot.NewUnsignedInteger(0),
 	}
 }
 func (r *Row) ToBytes() []byte {
@@ -57,3 +57,5 @@ func (r *Row) Len() uint32 {
 	}
 	return ret
 }
+
+

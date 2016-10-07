@@ -13,7 +13,7 @@ func NewPageMgr() *PageMgr {
 }
 
 func (mgr *PageMgr) AddPage(pg *Page) {
-	key := pg.PageID.Value
+	key := pg.pgID.Value
 	mgr.pageMap[key] = pg
 }
 
