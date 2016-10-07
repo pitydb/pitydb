@@ -57,7 +57,6 @@ func (header *pageHeader) ToBytes() []byte {
 	return buf.Bytes()
 }
 
-
 func (header *pageHeader) Make(buf []byte, offset uint32) uint32 {
 
 	idx := uint32(0)
@@ -108,16 +107,28 @@ func (p *Page) ToBytes() []byte {
 }
 
 func (p *Page) findIndexRow(key uint32) (*Page, int, bool) {
-	count := 0
+	valLen := int(p.size.Value)
 
-	size := len(p.data)
-	for i := size - 1; i >= 0; i-- {
-		count = i
-		if key >= p.data[i].Key.Value {
-			break
+	i := sort.Search(valLen, func(i int) bool {
+		return key <= p.data[i].Key.Value
+	})
+	//the rows is empty
+	if i == 0 && valLen == 0 {
+		return p, 0, false
+	}
+	if i >= valLen {
+		i = i - 1
+	}
+	if i > 0 {
+		x0 := p.data[i].Key.Value
+		x1 := p.data[i - 1].Key.Value
+
+		if key < x0 && key > x1 {
+			i = i - 1
 		}
 	}
-	return p, count + 1, true
+	return p, i + 1, true
+
 }
 
 func (p *Page) findOne(key uint32) (*Page, int, bool) {
@@ -130,23 +141,28 @@ func (p *Page) findOne(key uint32) (*Page, int, bool) {
 		return next.findOne(key)
 	}
 
-	val_len := int(p.size.Value)
+	valLen := int(p.size.Value)
 
-	i := sort.Search(val_len, func(i int) bool {
+	i := sort.Search(valLen, func(i int) bool {
 		return key <= p.data[i].Key.Value
 	})
 	//the rows is empty
-	if i == 0 && val_len == 0 {
+	if i == 0 && valLen == 0 {
 		return p, 0, false
 	}
 
+
 	//should put at the tail of the row array
-	if i >= val_len {
-		return p, val_len, false
+	if i >= valLen {
+		return p, valLen, false
 	}
 
 	if p.data[i].Key.Value == key {
 		return p, i, true
+	}else if (i > 0 && p.data[i - 1].Key.Value > key) {
+		return p, i - 1, false
+	}else if (i < valLen - 1 && p.data[i + 1].Key.Value < key) {
+		return p, i + 1, false
 	}
 	return p, i, false
 }

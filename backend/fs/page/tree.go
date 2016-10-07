@@ -71,7 +71,7 @@ func (tree *PageTree) NewPage(level byte, t byte) *Page {
 func (tree *PageTree) Insert(r *Row) {
 	key := r.Key.Value
 
-	node, idx, find := tree.FindOne(key)
+	node, idx, find := tree.root.findOne(key)
 
 	//the row is so big that one default can not hold it
 	if r.Len() > DefaultPageSize {
@@ -81,15 +81,12 @@ func (tree *PageTree) Insert(r *Row) {
 
 }
 func (tree *PageTree) Delete(key uint32) bool {
-	node, idx, find := tree.FindOne(key)
+	node, idx, find := tree.root.findOne(key)
 	if find {
 		node.delete(key, idx)
 		return true
 	}
 	return false
-}
-func (tree *PageTree) FindOne(key uint32) (*Page, int, bool) {
-	return tree.root.findOne(key)
 }
 
 func (tree *PageTree) Dump(level int) {
