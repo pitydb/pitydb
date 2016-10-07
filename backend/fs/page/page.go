@@ -4,19 +4,20 @@ import (
 	"github.com/lycying/pitydb/backend/fs"
 	"github.com/lycying/pitydb/backend/fs/slot"
 	"sort"
+	"bytes"
 )
 
 const DefaultPageSize = 1024 * 16
 
 const (
-	IndexPageType byte = iota
-	DataPageType
+	indexPageType byte = iota
+	dataPageType
 )
 
 type pageHeader struct {
 	fs.Persistent
 	pgID       *slot.UnsignedInteger //4294967295.0*16/1024/1024/1024 ~= 63.99999998509884 TiB
-	typ        *slot.Byte
+	pgType     *slot.Byte
 	level      *slot.Byte
 	left       *slot.UnsignedInteger
 	right      *slot.UnsignedInteger
@@ -26,30 +27,51 @@ type pageHeader struct {
 }
 
 func (header *pageHeader) ToBytes() []byte {
-	ret := header.pgID.ToBytes()
-	ret = append(ret, header.typ.ToBytes()...)
-	ret = append(ret, header.level.ToBytes()...)
-	ret = append(ret, header.left.ToBytes()...)
-	ret = append(ret, header.right.ToBytes()...)
-	ret = append(ret, header.checksum.ToBytes()...)
-	ret = append(ret, header.lastModify.ToBytes()...)
-	return ret
+
+	bPgID := header.pgID.ToBytes()
+	bPgType := header.pgType.ToBytes()
+	bLevel := header.level.ToBytes()
+	bLeft := header.left.ToBytes()
+	bRight := header.right.ToBytes()
+	bChecksum := header.checksum.ToBytes()
+	bLastModify := header.lastModify.ToBytes()
+
+	cap := len(bPgID)
+	cap += len(bPgType)
+	cap += len(bLevel)
+	cap += len(bLeft)
+	cap += len(bRight)
+	cap += len(bChecksum)
+	cap += len(bLastModify)
+
+	buf := bytes.NewBuffer(make([]byte, cap))
+
+	buf.Write(bPgID)
+	buf.Write(bPgType)
+	buf.Write(bLevel)
+	buf.Write(bLeft)
+	buf.Write(bRight)
+	buf.Write(bChecksum)
+	buf.Write(bLastModify)
+
+	return buf.Bytes()
 }
 
+
 func (header *pageHeader) Make(buf []byte, offset uint32) uint32 {
+
 	idx := uint32(0)
 	idx += header.pgID.Make(buf, idx + offset)
-	idx += header.typ.Make(buf, idx + offset)
+	idx += header.pgType.Make(buf, idx + offset)
 	idx += header.level.Make(buf, idx + offset)
 	idx += header.left.Make(buf, idx + offset)
 	idx += header.right.Make(buf, idx + offset)
 	idx += header.checksum.Make(buf, idx + offset)
 	idx += header.lastModify.Make(buf, idx + offset)
+
 	return idx
 }
 
-// DataPage 代表聚类行式存储块，作为最终的索引叶子节点，层级始终为0，其中存储的为多行数据
-// Page代表一组统一的块操作，PageRuntime为其代表的数据描述。Content为行内容
 type Page struct {
 	pageHeader
 
@@ -63,12 +85,10 @@ type Page struct {
 	_byteLen uint32 //finger if the size is larger than 16kb
 }
 
-// GetMax 得到页中最小的数字
 func (p *Page) getMinKey() uint32 {
 	return p.data[0].Key.Value
 }
 
-// Make 通过读取数据块中的数据来填充私有数据
 func (p *Page) Make(buf []byte, offset uint32) uint32 {
 	idx := uint32(0)
 	idx = p.pageHeader.Make(buf, idx + offset)
@@ -77,7 +97,7 @@ func (p *Page) Make(buf []byte, offset uint32) uint32 {
 	}
 	return idx
 }
-// ToBytes 生成字节
+
 func (p *Page) ToBytes() []byte {
 	ret := make([]byte, 0)
 	ret = append(ret, p.pageHeader.ToBytes()...)
@@ -86,6 +106,7 @@ func (p *Page) ToBytes() []byte {
 	}
 	return ret
 }
+
 func (p *Page) findIndexRow(key uint32) (*Page, int, bool) {
 	count := 0
 
@@ -130,7 +151,7 @@ func (p *Page) findOne(key uint32) (*Page, int, bool) {
 	return p, i, false
 }
 
-func (p *Page) insert(row *Row, index int, find bool) (*Page, uint32) {
+func (p *Page) insert(row *Row, index int, find bool) uint32 {
 	bs := uint32(0)
 	bs = p._byteLen + row.Len()
 	if find {
@@ -149,47 +170,48 @@ func (p *Page) insert(row *Row, index int, find bool) (*Page, uint32) {
 		for ; i < int(p.size.Value); i++ {
 			counter = counter + p.data[i].Len()
 			if counter > DefaultPageSize {
+				bs = counter - p.data[i].Len()
 				break
 			}
 		}
 
-		newNode := p.tree.NewPage(0, p.typ.Value)
-		//copy [i-1:] to newNode
-		newNode.copyToLeftPart(p.data[i:])
-		//reduce the orig node
-		p.deleteRightPart(i)
+		newPage := p.tree.NewPage(p.level.Value, p.pgType.Value)
+		//copy [:i-1] to newNode
+		newPage.copyRightPart(p, i - 1)
+		//only left [i-1:] part
+		p.deleteRightPart(i - 1)
 
 		if p.hasParent() {
-			indexRowForNew := newNode.makeIndexRow()
-			_, toIndex, _ := p.parent.findIndexRow(indexRowForNew.Key.Value)
-			myParent, _ := p.parent.insert(indexRowForNew, toIndex, false)
-			newNode.parent = myParent
+			indexRow := newPage.makeIndexRow()
+			_, toIndex, _ := p.parent.findIndexRow(indexRow.Key.Value)
+			p.parent.insert(indexRow, toIndex, false)
+			newPage.parent = p.parent
 
 		} else {
 			newRoot := p.tree.NewIndexPage(p.level.Value + 1)
 
-			indexRowForOld := p.makeIndexRow()
-			newRoot.insert(indexRowForOld, 0, false)
+			indexRow0 := p.makeIndexRow()
+			newRoot.insert(indexRow0, 0, false)
 			p.parent = newRoot
 
-			indexRowForNew := newNode.makeIndexRow()
-			newRoot.insert(indexRowForNew, 1, false)
-			newNode.parent = newRoot
+			indexRow1 := newPage.makeIndexRow()
+			newRoot.insert(indexRow1, 1, false)
+			newPage.parent = newRoot
 
 			p.tree.root = newRoot
 		}
 
 	}
-	return p, bs
+	return bs
 }
 
 func (p *Page) delete(key uint32, index int) {
 	p.data = append(p.data[:index], p.data[index + 1:]...)
 	p.size.Value--
-	p._byteLen = p.len()
+	p._byteLen = p.countByteLength()
 }
 
-func (p *Page) len() uint32 {
+func (p *Page) countByteLength() uint32 {
 	ret := uint32(0)
 	for _, v := range p.data {
 		ret = ret + v.Len()
@@ -197,16 +219,16 @@ func (p *Page) len() uint32 {
 	return ret
 }
 
-func (p *Page) copyToLeftPart(rs []*Row) {
-	p.data = append(p.data, rs...)
-	p.size.Value = uint32(len(rs))
-	p._byteLen = p.len()
+func (p *Page) copyRightPart(from *Page, index int) {
+	p.data = append(p.data, from.data[index:]...)
+	p.size.Value = uint32(len(p.data))
+	p._byteLen = p.countByteLength()
 }
 
 func (p *Page) deleteRightPart(index int) {
 	p.data = p.data[:index]
-	p.size.Value = uint32(index)
-	p._byteLen = p.len()
+	p.size.Value = uint32(len(p.data))
+	p._byteLen = p.countByteLength()
 }
 
 func (p *Page) shouldSplit() bool {
@@ -214,10 +236,10 @@ func (p *Page) shouldSplit() bool {
 }
 
 func (p *Page) isIndexPage() bool {
-	return p.typ.Value == IndexPageType
+	return p.pgType.Value == indexPageType
 }
 func (p *Page) isDataPage() bool {
-	return p.typ.Value == DataPageType
+	return p.pgType.Value == dataPageType
 }
 
 func (p *Page) hasParent() bool {

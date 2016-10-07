@@ -10,7 +10,7 @@ import (
 func getClusterKeyArrayFromRows(pg *Page) []uint32 {
 	debugarr := []uint32{}
 
-	if pg.typ.Value == DataPageType {
+	if pg.pgType.Value == dataPageType {
 		for _, rowinfo := range pg.data {
 			debugarr = append(debugarr, rowinfo.Key.Value)
 		}
@@ -85,7 +85,7 @@ func TestNewPage(t *testing.T) {
 	tree.Delete(uint32(5))
 	assert.Equal(t, getClusterKeyArrayFromRows(tree.root), []uint32{uint32(3), uint32(4), uint32(7), uint32(9)})
 
-	for i := 1; i < 10000; i++ {
+	for i := 1; i < 1; i++ {
 		r := NewRow(meta)
 		r.Fill(
 			slot.NewString("skflksfsfdsjflsjfslfj"),
@@ -99,7 +99,7 @@ func TestNewPage(t *testing.T) {
 
 		tree.Insert(r)
 	}
-	for i := 20000; i >= 10000; i-- {
+	for i := 20000; i >= 1; i-- {
 		r := NewRow(meta)
 		r.Fill(
 			slot.NewString("skflksfsfdsjflsjfslfj"),

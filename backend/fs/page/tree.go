@@ -17,7 +17,7 @@ func NewPageTree(meta *RowMeta, link *os.File) *PageTree {
 	root := &Page{
 		pageHeader:pageHeader{
 			pgID:slot.NewUnsignedInteger(mgr.NextPageId()),
-			typ: slot.NewByte(DataPageType),
+			pgType: slot.NewByte(dataPageType),
 			level:slot.NewByte(0x00),
 			left:slot.NewUnsignedInteger(0),
 			right:slot.NewUnsignedInteger(0),
@@ -43,16 +43,16 @@ func NewPageTree(meta *RowMeta, link *os.File) *PageTree {
 
 }
 func (tree *PageTree) NewIndexPage(level byte) *Page {
-	return tree.NewPage(level, IndexPageType)
+	return tree.NewPage(level, indexPageType)
 }
 func (tree *PageTree) NewDataPage(level byte) *Page {
-	return tree.NewPage(level, DataPageType)
+	return tree.NewPage(level, dataPageType)
 }
 func (tree *PageTree) NewPage(level byte, t byte) *Page {
 	p := &Page{
 		pageHeader:pageHeader{
 			pgID:slot.NewUnsignedInteger(tree.mgr.NextPageId()),
-			typ:slot.NewByte(t),
+			pgType:slot.NewByte(t),
 			level:slot.NewByte(level),
 			left:slot.NewUnsignedInteger(0),
 			right:slot.NewUnsignedInteger(0),
@@ -110,7 +110,7 @@ func dumpPage(pg *Page) {
 	if nil == pg {
 		return
 	}
-	if pg.typ.Value == DataPageType {
+	if pg.pgType.Value == dataPageType {
 		print(pg.level.Value, "D`", pg.pgID.Value, "@", _getParentPageID(pg), "`\t:(")
 		for _, x := range pg.data {
 			print(x.Key.Value, ",")
