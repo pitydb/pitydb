@@ -12,17 +12,6 @@ const (
 	TYPE_DATA_PAGE
 )
 
-type Page interface {
-	fs.Persistent
-
-	FindRow(key uint32) (Page, int, bool)
-	Insert(r interface{}, index int, find bool) (Page, uint32)
-	Len() uint32
-	GetMax() uint32
-	Runtime() PageRuntime
-	FindIndexRow(key uint32) (Page, int, bool)
-}
-
 //4+1+4+4+8 = 21
 type PageHeader struct {
 	fs.Persistent
@@ -36,23 +25,6 @@ type PageHeader struct {
 	ItemSize   *slot.UnsignedInteger //this counter is used to read data from disk
 }
 
-type PageRuntime struct {
-	PageHeader
-
-	pre        Page
-	next       Page
-	parent     Page
-
-	tree       *PageTree
-	byteLength uint32 //finger if the size is larger than 16kb
-}
-
-func (r PageRuntime) GetLevel() byte {
-	return r.Level.Value
-}
-func (r PageRuntime) GetItemSize() uint32 {
-	return r.ItemSize.Value
-}
 
 func (r *PageHeader) ToBytes() []byte {
 	ret := r.PageID.ToBytes()

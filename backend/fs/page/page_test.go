@@ -7,12 +7,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func getClusterKeyArrayFromRows(page Page) []uint32 {
+func getClusterKeyArrayFromRows(pg *Page) []uint32 {
 	debugarr := []uint32{}
 
-	if page.Runtime().Type.Value == TYPE_DATA_PAGE {
-		v := page.(*DataPage)
-		for _, rowinfo := range v.Content {
+	if pg.Type.Value == TYPE_DATA_PAGE {
+		for _, rowinfo := range pg.Content {
 			debugarr = append(debugarr, rowinfo.ClusteredKey.Value)
 		}
 	}

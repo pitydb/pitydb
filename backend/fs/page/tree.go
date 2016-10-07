@@ -6,7 +6,7 @@ import (
 )
 
 type PageTree struct {
-	root Page
+	root *Page
 	meta *RowMeta
 	link *os.File
 	mgr  *PageMgr
@@ -14,21 +14,19 @@ type PageTree struct {
 
 func NewPageTree(meta *RowMeta, link *os.File) *PageTree {
 	mgr := NewPageMgr()
-	root := &DataPage{
-		PageRuntime: PageRuntime{
-			PageHeader:PageHeader{
-				PageID:slot.NewUnsignedInteger(mgr.NextPageId()),
-				Type:slot.NewByte(TYPE_DATA_PAGE),
-				Level:slot.NewByte(0x00),
-				Pre:slot.NewUnsignedInteger(0),
-				Next:slot.NewUnsignedInteger(0),
-				Checksum:slot.NewUnsignedInteger(0),
-				LastModify:slot.NewUnsignedLong(0),
-				ItemSize:slot.NewUnsignedInteger(0),
-			},
-			byteLength:uint32(0),
-			parent:nil,
+	root := &Page{
+		PageHeader:PageHeader{
+			PageID:slot.NewUnsignedInteger(mgr.NextPageId()),
+			Type:slot.NewByte(TYPE_DATA_PAGE),
+			Level:slot.NewByte(0x00),
+			Pre:slot.NewUnsignedInteger(0),
+			Next:slot.NewUnsignedInteger(0),
+			Checksum:slot.NewUnsignedInteger(0),
+			LastModify:slot.NewUnsignedLong(0),
+			ItemSize:slot.NewUnsignedInteger(0),
 		},
+		byteLength:uint32(0),
+		parent:nil,
 		Content:[]*Row{},
 	}
 
@@ -44,22 +42,20 @@ func NewPageTree(meta *RowMeta, link *os.File) *PageTree {
 	return tree
 
 }
-func (tree *PageTree) NewDataPage(level byte,t byte) *DataPage {
-	p := &DataPage{
-		PageRuntime:PageRuntime{
-			PageHeader:PageHeader{
-				PageID:slot.NewUnsignedInteger(tree.mgr.NextPageId()),
-				Type:slot.NewByte(t),
-				Level:slot.NewByte(level),
-				Pre:slot.NewUnsignedInteger(0),
-				Next:slot.NewUnsignedInteger(0),
-				Checksum:slot.NewUnsignedInteger(0),
-				LastModify:slot.NewUnsignedLong(0),
-				ItemSize:slot.NewUnsignedInteger(0),
-			},
-			tree:tree,
-			byteLength:0,
+func (tree *PageTree) NewDataPage(level byte, t byte) *Page {
+	p := &Page{
+		PageHeader:PageHeader{
+			PageID:slot.NewUnsignedInteger(tree.mgr.NextPageId()),
+			Type:slot.NewByte(t),
+			Level:slot.NewByte(level),
+			Pre:slot.NewUnsignedInteger(0),
+			Next:slot.NewUnsignedInteger(0),
+			Checksum:slot.NewUnsignedInteger(0),
+			LastModify:slot.NewUnsignedLong(0),
+			ItemSize:slot.NewUnsignedInteger(0),
 		},
+		tree:tree,
+		byteLength:0,
 		Content:[]*Row{},
 	}
 	tree.mgr.AddPage(p)
@@ -71,30 +67,9 @@ func NewIndexRow() *Row {
 		Type:slot.ST_UNSIGNED_INTEGER,
 	}
 	r := NewRow(meta)
-	r.Data = append(r.Data,slot.NewUnsignedInteger(0))
+	r.Data = append(r.Data, slot.NewUnsignedInteger(0))
 	return r
 }
-//func (tree *PageTree) NewIndexPage(level byte) *IndexPage {
-//	p := &IndexPage{
-//		PageRuntime:PageRuntime{
-//			PageHeader:PageHeader{
-//				PageID:slot.NewUnsignedInteger(tree.mgr.NextPageId()),
-//				Type:slot.NewByte(TYPE_INDEX_PAGE),
-//				Level:slot.NewByte(level),
-//				Pre:slot.NewUnsignedInteger(0),
-//				Next:slot.NewUnsignedInteger(0),
-//				Checksum:slot.NewUnsignedInteger(0),
-//				LastModify:slot.NewUnsignedLong(0),
-//				ItemSize:slot.NewUnsignedInteger(0),
-//			},
-//			tree:tree,
-//			byteLength:0,
-//		},
-//		Content:[]*IndexRow{},
-//	}
-//	tree.mgr.AddPage(p)
-//	return p
-//}
 
 func (tree *PageTree) InsertRow(r *Row) {
 	key := r.ClusteredKey.Value
@@ -111,12 +86,12 @@ func (tree *PageTree) InsertRow(r *Row) {
 func (tree *PageTree) Delete(key uint32) bool {
 	node, idx, find := tree.FindRow(key)
 	if find {
-		node.(*DataPage).Delete(key, idx)
+		node.Delete(key, idx)
 		return true
 	}
 	return false
 }
-func (tree *PageTree) FindRow(key uint32) (Page, int, bool) {
+func (tree *PageTree) FindRow(key uint32) (*Page, int, bool) {
 	return tree.root.FindRow(key)
 }
 
@@ -127,37 +102,35 @@ func (tree *PageTree) Dump(level int) {
 	println("END")
 	println("")
 }
-func _getParent(pg Page) uint32 {
-	if pg.Runtime().parent == nil {
+func _getParent(pg *Page) uint32 {
+	if pg.parent == nil {
 		return 0
 	}else {
-		return pg.Runtime().parent.Runtime().PageID.Value
+		return pg.parent.PageID.Value
 	}
 }
-func dumpPage(pg Page, level int) {
+func dumpPage(pg *Page, level int) {
 	if nil == pg {
 		return
 	}
-	if pg.Runtime().Type.Value == TYPE_DATA_PAGE {
+	if pg.Type.Value == TYPE_DATA_PAGE {
 		if level > 0 {
-			v := pg.(*DataPage)
-			print(v.Level.Value, "D`", v.PageID.Value, "@", _getParent(v), "`\t:(")
-			for _, x := range v.Content {
+			print(pg.Level.Value, "D`", pg.PageID.Value, "@", _getParent(pg), "`\t:(")
+			for _, x := range pg.Content {
 				print(x.ClusteredKey.Value, ",")
 			}
 			print(")")
 			println()
 		}
 	}else {
-		v := pg.(*DataPage)
-		print(v.Level.Value, "I`", v.PageID.Value, "@", _getParent(v), "`\t:[")
-		for _, x := range v.Content {
+		print(pg.Level.Value, "I`", pg.PageID.Value, "@", _getParent(pg), "`\t:[")
+		for _, x := range pg.Content {
 			print(x.ClusteredKey.Value, ",")
 		}
 		print("]")
 		println()
-		for _, x := range v.Content {
-			px := v.tree.mgr.GetPage(x.Data[0].(*slot.UnsignedInteger).Value)
+		for _, x := range pg.Content {
+			px := pg.tree.mgr.GetPage(x.Data[0].(*slot.UnsignedInteger).Value)
 			dumpPage(px, level)
 		}
 	}
