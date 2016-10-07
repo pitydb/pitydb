@@ -20,6 +20,7 @@ type Page interface {
 	Len() uint32
 	GetMax() uint32
 	Runtime() PageRuntime
+	FindIndexRow(key uint32) (Page, int, bool)
 }
 
 //4+1+4+4+8 = 21

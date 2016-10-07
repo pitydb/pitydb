@@ -44,12 +44,12 @@ func NewPageTree(meta *RowMeta, link *os.File) *PageTree {
 	return tree
 
 }
-func (tree *PageTree) NewDataPage(level byte) *DataPage {
+func (tree *PageTree) NewDataPage(level byte,t byte) *DataPage {
 	p := &DataPage{
 		PageRuntime:PageRuntime{
 			PageHeader:PageHeader{
 				PageID:slot.NewUnsignedInteger(tree.mgr.NextPageId()),
-				Type:slot.NewByte(TYPE_DATA_PAGE),
+				Type:slot.NewByte(t),
 				Level:slot.NewByte(level),
 				Pre:slot.NewUnsignedInteger(0),
 				Next:slot.NewUnsignedInteger(0),
@@ -65,27 +65,36 @@ func (tree *PageTree) NewDataPage(level byte) *DataPage {
 	tree.mgr.AddPage(p)
 	return p
 }
-func (tree *PageTree) NewIndexPage(level byte) *IndexPage {
-	p := &IndexPage{
-		PageRuntime:PageRuntime{
-			PageHeader:PageHeader{
-				PageID:slot.NewUnsignedInteger(tree.mgr.NextPageId()),
-				Type:slot.NewByte(TYPE_INDEX_PAGE),
-				Level:slot.NewByte(level),
-				Pre:slot.NewUnsignedInteger(0),
-				Next:slot.NewUnsignedInteger(0),
-				Checksum:slot.NewUnsignedInteger(0),
-				LastModify:slot.NewUnsignedLong(0),
-				ItemSize:slot.NewUnsignedInteger(0),
-			},
-			tree:tree,
-			byteLength:0,
-		},
-		Content:[]*IndexRow{},
+
+func NewIndexRow() *Row {
+	meta := &RowMeta{
+		Type:slot.ST_UNSIGNED_INTEGER,
 	}
-	tree.mgr.AddPage(p)
-	return p
+	r := NewRow(meta)
+	r.Data = append(r.Data,slot.NewUnsignedInteger(0))
+	return r
 }
+//func (tree *PageTree) NewIndexPage(level byte) *IndexPage {
+//	p := &IndexPage{
+//		PageRuntime:PageRuntime{
+//			PageHeader:PageHeader{
+//				PageID:slot.NewUnsignedInteger(tree.mgr.NextPageId()),
+//				Type:slot.NewByte(TYPE_INDEX_PAGE),
+//				Level:slot.NewByte(level),
+//				Pre:slot.NewUnsignedInteger(0),
+//				Next:slot.NewUnsignedInteger(0),
+//				Checksum:slot.NewUnsignedInteger(0),
+//				LastModify:slot.NewUnsignedLong(0),
+//				ItemSize:slot.NewUnsignedInteger(0),
+//			},
+//			tree:tree,
+//			byteLength:0,
+//		},
+//		Content:[]*IndexRow{},
+//	}
+//	tree.mgr.AddPage(p)
+//	return p
+//}
 
 func (tree *PageTree) InsertRow(r *Row) {
 	key := r.ClusteredKey.Value
@@ -140,16 +149,16 @@ func dumpPage(pg Page, level int) {
 			println()
 		}
 	}else {
-		v := pg.(*IndexPage)
+		v := pg.(*DataPage)
 		print(v.Level.Value, "I`", v.PageID.Value, "@", _getParent(v), "`\t:[")
 		for _, x := range v.Content {
-			print(x.KeyWordMark.Value, ",")
+			print(x.ClusteredKey.Value, ",")
 		}
 		print("]")
 		println()
 		for _, x := range v.Content {
-			px := v.tree.mgr.GetPage(x.KeyPageId.Value)
-			dumpPage(px,level)
+			px := v.tree.mgr.GetPage(x.Data[0].(*slot.UnsignedInteger).Value)
+			dumpPage(px, level)
 		}
 	}
 }

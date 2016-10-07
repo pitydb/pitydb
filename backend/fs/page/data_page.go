@@ -2,6 +2,7 @@ package page
 
 import (
 	"sort"
+	"github.com/lycying/pitydb/backend/fs/slot"
 )
 
 // DataPage 代表聚类行式存储块，作为最终的索引叶子节点，层级始终为0，其中存储的为多行数据
@@ -27,9 +28,9 @@ func (r *DataPage) GetMax() uint32 {
 // Make 通过读取数据块中的数据来填充私有数据
 func (r *DataPage) Make(buf []byte, offset uint32) uint32 {
 	idx := uint32(0)
-	idx = r.PageHeader.Make(buf, idx+offset)
+	idx = r.PageHeader.Make(buf, idx + offset)
 	for _, v := range r.Content {
-		idx += v.Make(buf, idx+offset)
+		idx += v.Make(buf, idx + offset)
 	}
 	return idx
 }
@@ -43,6 +44,15 @@ func (r *DataPage) ToBytes() []byte {
 }
 
 func (d *DataPage) FindRow(key uint32) (Page, int, bool) {
+	if d.Type.Value == TYPE_INDEX_PAGE {
+		_, count, _ := d.FindIndexRow(key)
+
+		count = count - 1
+		next := d.tree.mgr.GetPage(d.Content[count].Data[0].(*slot.UnsignedInteger).Value)
+
+		return next.FindRow(key)
+	}
+
 	val_len := int(d.ItemSize.Value)
 
 	i := sort.Search(val_len, func(i int) bool {
@@ -89,34 +99,34 @@ func (p *DataPage) Insert(obj interface{}, index int, find bool) (Page, uint32) 
 			}
 		}
 
-		newNode := p.tree.NewDataPage(0)
+		newNode := p.tree.NewDataPage(0, p.Type.Value)
 		//copy [i-1:] to newNode
 		newNode.InsertRows(p.Content[i:])
 		//reduce the orig node
 		p.PageReduce(0, i)
 
 		if p.parent == nil {
-			newRoot := p.tree.NewIndexPage(p.Level.Value + 1)
+			newRoot := p.tree.NewDataPage(p.Level.Value + 1, TYPE_INDEX_PAGE)
 
 			indexRowForOld := NewIndexRow()
-			indexRowForOld.KeyPageId = p.PageID
-			indexRowForOld.KeyWordMark.Value = p.GetMax()
+			indexRowForOld.Data[0].(*slot.UnsignedInteger).Value = p.PageID.Value
+			indexRowForOld.ClusteredKey.Value = p.GetMax()
 			newRoot.Insert(indexRowForOld, 0, false)
 			p.parent = newRoot
 
 			indexRowForNew := NewIndexRow()
-			indexRowForNew.KeyPageId = newNode.PageID
-			indexRowForNew.KeyWordMark.Value = newNode.GetMax()
+			indexRowForNew.Data[0].(*slot.UnsignedInteger).Value = newNode.PageID.Value
+			indexRowForNew.ClusteredKey.Value = newNode.GetMax()
 			newRoot.Insert(indexRowForNew, 1, false)
 			newNode.parent = newRoot
 
 			p.tree.root = newRoot
 		} else {
 			indexRowForNew := NewIndexRow()
-			indexRowForNew.KeyPageId = newNode.PageID
-			indexRowForNew.KeyWordMark.Value = newNode.GetMax()
+			indexRowForNew.Data[0].(*slot.UnsignedInteger).Value = newNode.PageID.Value
+			indexRowForNew.ClusteredKey.Value = newNode.GetMax()
 
-			_, toIndex, _ := p.parent.(*IndexPage).FindIndexRow(indexRowForNew.KeyWordMark.Value)
+			_, toIndex, _ := p.parent.FindIndexRow(indexRowForNew.ClusteredKey.Value)
 			myParent, _ := p.parent.Insert(indexRowForNew, toIndex, false)
 			newNode.parent = myParent
 		}
@@ -126,7 +136,7 @@ func (p *DataPage) Insert(obj interface{}, index int, find bool) (Page, uint32) 
 }
 
 func (p *DataPage) Delete(key uint32, index int) {
-	p.Content = append(p.Content[:index], p.Content[index+1:]...)
+	p.Content = append(p.Content[:index], p.Content[index + 1:]...)
 	p.ItemSize.Value--
 	p.byteLength = p.Len()
 }
@@ -150,3 +160,37 @@ func (p *DataPage) PageReduce(begin, end int) {
 	p.ItemSize.Value = uint32(end - begin)
 	p.byteLength = p.Len()
 }
+func (p *DataPage) FindIndexRow(key uint32) (Page, int, bool) {
+
+	count := 0
+
+	size := len(p.Content)
+	for i := size - 1; i >= 0; i-- {
+		count = i
+		if key >= p.Content[i].ClusteredKey.Value {
+			break
+		}
+	}
+	return p, count + 1, true
+
+
+	//val_len := len(p.Content)
+	//
+	//i := sort.Search(val_len, func(i int) bool {
+	//	return key <= p.Content[i].KeyWordMark.Value
+	//})
+	//
+	////the rows is empty
+	//if i == 0 && val_len == 0 {
+	//	return nil, 0, false
+	//}
+	//
+	////should put at the tail of the row array
+	//if i >= val_len {
+	//	i = val_len
+	//}
+	//
+	//return p, i, true
+
+}
+
