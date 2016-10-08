@@ -7,7 +7,7 @@ import (
 	"bytes"
 )
 
-const DefaultPageSize = 1024 * 16
+const DefaultPageSize = 1024 * 2
 
 const (
 	indexPageType byte = iota
@@ -159,11 +159,13 @@ func (p *Page) findOne(key uint32) (*Page, int, bool) {
 
 	if p.data[i].Key.Value == key {
 		return p, i, true
-	}else if (i > 0 && p.data[i - 1].Key.Value > key) {
-		return p, i - 1, false
-	}else if (i < valLen - 1 && p.data[i + 1].Key.Value < key) {
-		return p, i + 1, false
 	}
+
+	//else if (i > 0 && p.data[i - 1].Key.Value > key) {
+	//return p, i - 1, false
+	//}else if (i < valLen - 1 && p.data[i + 1].Key.Value < key) {
+	//return p, i + 1, false
+	//}
 	return p, i, false
 }
 

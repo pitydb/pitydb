@@ -89,7 +89,7 @@ func (tree *PageTree) Delete(key uint32) bool {
 	return false
 }
 
-func (tree *PageTree) Dump(level int) {
+func (tree *PageTree) Dump() {
 	println("BEGIN")
 	root := tree.root
 	dumpPage(root)

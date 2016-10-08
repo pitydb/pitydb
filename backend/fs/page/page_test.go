@@ -99,7 +99,7 @@ func TestNewPage(t *testing.T) {
 
 		tree.Insert(r)
 	}
-	for i := 20000; i >= 1; i-- {
+	for i := 100; i >= 1; i-- {
 		r := NewRow(meta)
 		r.Fill(
 			slot.NewString("skflksfsfdsjflsjfslfj"),
@@ -113,7 +113,7 @@ func TestNewPage(t *testing.T) {
 
 		tree.Insert(r)
 	}
-	tree.Dump(1)
+	tree.Dump()
 	//for i := 1; i < 20000; i++ {
 	//	_, _, found := tree.root.findOne(uint32(i))
 	//	assert.Equal(t, found, true)
