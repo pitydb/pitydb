@@ -1,60 +1,62 @@
 package primitive
 
-import "unsafe"
-
-// A structPointer is a pointer to a struct.
-type structPointer unsafe.Pointer
-
-
-// Marshaler is the interface representing objects that can marshal themselves.
-type Marshaler interface {
-	Marshal() ([]byte, error)
+type Encoder interface {
+	Encode() ([]byte, error)
 }
 
-// Unmarshaler is the interface representing objects that can
-// unmarshal themselves.  The method should reset the receiver before
-// decoding starts.  The argument points to data that may be
-// overwritten, so implementations should not keep references to the
-// buffer.
-type Unmarshaler interface {
-	Unmarshal(buf []byte, offset int) (int, error)
+type DeCoder interface {
+	Decode(buf []byte, offset int) (int, error)
+}
+
+type CellHolder interface {
+	Encoder
+	DeCoder
+
+	SetValue(PrimitiveValue)
+	GetValue() PrimitiveValue
+	GetLen() int
 }
 
 type Byte struct {
+	CellHolder
 	value byte
 }
 type Bool struct {
+	CellHolder
 	value bool
 }
 
 type Int32 struct {
-	value int32
-}
-
-type Int struct {
+	CellHolder
 	value int32
 }
 
 type Int64 struct {
+	CellHolder
 	value int64
 }
 
 type Float32 struct {
+	CellHolder
 	value float32
 }
 
 type Float64 struct {
+	CellHolder
 	value float64
 }
 
-type Uint32 struct {
+type UInt32 struct {
+	CellHolder
 	value uint32
 }
 
-type Uint64 struct {
-	value uint32
+type UInt64 struct {
+	CellHolder
+	value uint64
 }
 
 type String struct {
+	CellHolder
 	value string
 }
